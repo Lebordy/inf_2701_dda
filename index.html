@@ -1047,6 +1047,65 @@
             overflow-wrap: anywhere;
             }
 
+            /* ===== Settings modal: mobile fix ===== */
+            @media (max-width: 520px){
+            /* модалка должна влезать по высоте и скроллиться внутри */
+            .modal{
+                padding: 12px;
+                padding-top: max(12px, env(safe-area-inset-top));
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+
+            #settingsModal .modal-card,
+            #cmdPalette .modal-card{
+                width: 100%;
+                max-height: calc(100dvh - 24px);
+                overflow: hidden; /* скролл будет в body */
+            }
+
+            #settingsModal .modal-body,
+            #cmdPalette .modal-body{
+                max-height: calc(100dvh - 140px); /* место под header */
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* шапка: разрешаем перенос, чтобы кнопки не “уезжали” */
+            #settingsModal .modal-head,
+            #cmdPalette .modal-head{
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            /* фикс inline width: 220px/190px в header-row */
+            #settingsModal .modal-head .row,
+            #cmdPalette .modal-head .row{
+                width: 100% !important;
+            }
+
+            /* кнопки в шапке: не должны быть width:100% каждая в одной строке */
+            #settingsModal .modal-head .row button,
+            #cmdPalette .modal-head .row button{
+                width: auto !important;
+                flex: 1 1 140px;
+                margin-top: 0 !important;
+                padding: 12px 12px;
+                min-height: 44px;
+            }
+
+            /* kv-блоки: на телефоне лучше “в столбик” */
+            #settingsModal .kv{
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            /* range-слайдеры: растягиваем на ширину */
+            #settingsModal input[type="range"]{
+                width: 100% !important;
+            }
+            }
+
+
 
 
     </style>
