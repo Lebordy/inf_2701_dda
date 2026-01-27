@@ -1317,7 +1317,7 @@
             <div class="card-header">
                 <div>
                     <h2><span class="material-symbols-outlined">calculate</span> Сумма нечетных</h2>
-                    <div class="card-subtitle">Σ(1..N, шаг 2) — за 1 клик</div>
+                    <div class="card-subtitle">Σ(1..N, шаг 2)</div>
                 </div>
                 <div class="card-controls">
                     <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
@@ -1544,9 +1544,7 @@
                 </div>
             </div>
 
-            <div class="mini" style="margin-top: 10px;">
-                Поддерживает сохранение и drag&drop карточек задач.
-            </div>
+            
         </div>
 
         <div class="card" id="markdown" data-tags="markdown заметки редактор форматирование" draggable="true">
@@ -1661,10 +1659,6 @@ console.log('hello');
             <div style="display:flex; justify-content:center; margin-top:12px;">
                 <canvas id="qrCanvas" width="220" height="220" style="border-radius: 22px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.10);"></canvas>
             </div>
-
-            <div class="mini" id="qrHint" style="margin-top:10px;">
-                Если QR не генерируется — проверь доступ к CDN (jsdelivr).
-            </div>
         </div>
 
         <div class="card" id="net" data-tags="онлайн погода валюты крипто время" draggable="true">
@@ -1684,7 +1678,7 @@ console.log('hello');
                 <h4 style="margin:0 0 10px;">Погода (Open-Meteo)</h4>
                 <div class="row">
                     <input id="wCity" placeholder="Город (например Amsterdam)" />
-                    <button onclick="fetchWeather()" style="width: 170px; margin-top: 10px;">Получить</button>
+                    <button onclick="fetchWeather()" style="width: 200px; margin-top: 10px;">Получить</button>
                 </div>
                 <div id="wOut" class="mini" style="margin-top:10px;"></div>
             </div>
@@ -2282,6 +2276,11 @@ console.log('hello');
             const useUpper = document.getElementById('pwdUpper').checked;
             const useNum = document.getElementById('pwdNum').checked;
             const useSym = document.getElementById('pwdSym').checked;
+
+            if(!useUpper && !useNum && !useSym){
+            showToast("Выбери хотя бы один набор символов", "warn");
+            return;
+            }
 
             let charset = "abcdefghijklmnopqrstuvwxyz";
             if(useUpper) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
