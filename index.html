@@ -1,0 +1,3812 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Liquid OS :: Ultra Soft Glass Edition</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Quicksand:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+
+    <!-- Optional libs (work online; safe fallbacks in code) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+    <style>
+        /* ==========================================================
+           LIQUID OS :: ULTRA SOFT GLASS EDITION (v5.x OVERLAY)
+           NOTE: This file is an "add-on" over gemini_v3:
+           - All old functionality preserved (ids, functions, UI blocks)
+           - Lots of new cards, softer shapes, more glass, more dynamics
+           ========================================================== */
+
+        /* --- 1. CORE VARIABLES & THEME (preserved + extended) --- */
+        :root{
+            --primary: #00f2ff;
+            --secondary: #bc13fe;
+            --accent-glow: rgba(0, 242, 255, 0.4);
+            --bg-dark: #090910;
+
+            --glass-bg: rgba(20, 25, 40, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-shine: rgba(255, 255, 255, 0.05);
+
+            --font-head: 'Orbitron', sans-serif;
+            --font-body: 'Quicksand', sans-serif;
+
+            --anim-speed: 0.4s;
+            --card-radius: 38px;
+            --btn-radius: 999px;
+
+            /* v5 additions */
+            --soft-shadow: 0 22px 60px rgba(0,0,0,0.32);
+            --inner-glow: 0 0 0 1px rgba(255,255,255,0.06) inset;
+
+            --ui-padding-x: 20px;
+            --ui-padding-y: 16px;
+
+            --mx: 50%;
+            --my: 50%;
+            --spot-alpha: 0.22;
+
+            --card-tilt: 10deg;
+            --glass-blur: 30px;
+            --glass-sat: 140%;
+            --noise-opacity: 0.05;
+
+            --ok: #35ff9a;
+            --warn: #ffd54a;
+            --bad: #ff5a77;
+
+            --grid-gap: 38px;
+            --max-card: 420px;
+        }
+
+        /* --- 2. GLOBAL RESET --- */
+        *{ box-sizing:border-box; scroll-behavior:smooth; outline:none; }
+        ::selection{ background: var(--primary); color:#000; }
+
+        body{
+            margin:0;
+            padding: 92px 22px 50px 92px;
+            min-height:100vh;
+            overflow-x:hidden;
+            color:#f0f0f0;
+            font-family:var(--font-body);
+
+            /* base + pointer spotlight */
+            background:
+                radial-gradient(circle at var(--mx) var(--my), rgba(0,242,255,var(--spot-alpha)) 0%, transparent 45%),
+                radial-gradient(circle at 18% 85%, rgba(188,19,254,0.22) 0%, transparent 45%),
+                radial-gradient(circle at 85% 15%, rgba(0,80,255,0.18) 0%, transparent 40%),
+                linear-gradient(180deg, #060610 0%, #080815 60%, #05050d 100%);
+        }
+
+        /* subtle noise overlay */
+        body::before{
+            content:"";
+            position:fixed; inset:0;
+            pointer-events:none;
+            z-index:-1;
+            opacity: var(--noise-opacity);
+            background-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+        }
+
+        /* --- 3. CANVASES (background layers) --- */
+        #bgCanvas{
+            position:fixed;
+            inset:0;
+            width:100%;
+            height:100%;
+            z-index:-3;
+            pointer-events:none;
+            filter: blur(60px) saturate(120%);
+            opacity:0.9;
+        }
+
+        #particleCanvas{
+            position:fixed;
+            inset:0;
+            width:100%;
+            height:100%;
+            z-index:-4;
+            pointer-events:none;
+            opacity:0.75;
+        }
+
+        /* --- 4. SCROLLBAR --- */
+        ::-webkit-scrollbar{ width: 8px; }
+        ::-webkit-scrollbar-track{ background: transparent; }
+        ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius:999px; }
+        ::-webkit-scrollbar-thumb:hover{ background: var(--primary); }
+
+        /* --- 5. HUD (TOP BAR) --- */
+        .hud{
+            position:fixed;
+            top:18px; left:18px; right:18px;
+            height:72px;
+            z-index:1000;
+
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding: 0 30px;
+
+            border-radius: 999px;
+            background: rgba(12,12,20,0.62);
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 14px 55px rgba(0,0,0,0.35);
+
+            backdrop-filter: blur(28px) saturate(160%);
+            -webkit-backdrop-filter: blur(28px) saturate(160%);
+
+            transition: 0.25s ease;
+        }
+
+        .hud::after{
+            content:"";
+            position:absolute;
+            inset: 1px;
+            border-radius: 999px;
+            pointer-events:none;
+            background:
+                radial-gradient(120% 120% at 10% 0%, rgba(255,255,255,0.10), transparent 55%),
+                radial-gradient(120% 120% at 90% 100%, rgba(0,242,255,0.08), transparent 50%);
+            mix-blend-mode: screen;
+            opacity: 0.9;
+        }
+
+        .hud-left{ display:flex; align-items:center; gap:16px; position:relative; z-index:1; }
+        .hud-title{
+            font-family:var(--font-head);
+            font-weight:700;
+            font-size: 20px;
+            letter-spacing:1px;
+            background: linear-gradient(90deg, #fff, var(--primary));
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+
+        .hud-sub{
+            font-size:10px;
+            opacity:0.55;
+            letter-spacing:2.3px;
+        }
+
+        .hud-right{ display:flex; gap:12px; align-items:center; position:relative; z-index:1; }
+
+        .credit-table{
+            width:100%;
+            border-collapse:collapse;
+            font-size:12px;
+        }
+        .credit-table th, .credit-table td{
+            padding:8px 10px;
+            border-bottom:1px solid rgba(255,255,255,0.10);
+            text-align:right;
+        }
+        .credit-table th:first-child, .credit-table td:first-child{
+            
+        }
+        .credit-table thead th{
+            position: sticky;
+            top: 0;
+            background: rgba(10,10,18,0.85);
+            backdrop-filter: blur(10px);
+        }
+        .credit-table .muted{
+            opacity:.75;
+        }
+
+        /* === Professional Result Panel (унификация вывода) === */
+        .result-panel{
+        margin-top:14px;
+        padding:14px 14px 10px;
+        border-radius:20px;
+        background:rgba(255,255,255,0.05);
+        border:1px solid rgba(255,255,255,0.10);
+        box-shadow: var(--inner-glow);
+        }
+
+        .result-panel[data-status="idle"]{ opacity:0.88; }
+        .result-panel[data-status="ok"]{ border-color: rgba(53,255,154,0.35); }
+        .result-panel[data-status="error"]{ border-color: rgba(255,90,119,0.45); }
+
+        .result-main{
+        text-align:center;
+        font-size:14px;
+        }
+
+        .result-main .value{
+        font-size:22px;
+        color:var(--primary);
+        font-weight:700;
+        font-family:var(--font-head);
+        }
+
+        .result-meta{
+        margin-top:6px;
+        font-size:12px;
+        opacity:0.75;
+        text-align:center;
+        }
+
+        .result-actions{
+        display:flex;
+        gap:8px;
+        justify-content:center;
+        margin-top:10px;
+        flex-wrap:wrap;
+        }
+
+        .btn-mini{
+        padding:8px 12px;
+        font-size:12px;
+        border-radius:999px;
+        }
+
+        /* Steps */
+        .steps{ margin-top:10px; }
+        .steps summary{ cursor:pointer; font-size:12px; opacity:0.85; }
+        .steps-body{ margin-top:8px; font-size:12px; line-height:1.5; opacity:0.92; }
+
+        /* keyboard polish */
+        :focus-visible{
+        outline:2px solid rgba(0,242,255,0.65);
+        outline-offset:3px;
+        }
+
+        .icon-btn{
+            width:40px; height:40px;
+            border-radius:999px;
+            display:grid; place-items:center;
+            cursor:pointer;
+            color:#bdbdbd;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            transition: 0.22s ease;
+            user-select:none;
+        }
+
+        .icon-btn:hover{
+            transform: translateY(-2px) scale(1.02);
+            color:#000;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 10px 30px rgba(0,242,255,0.22);
+        }
+
+        /* Search container (preserved + improved) */
+        .search-container{ flex-grow:1; display:flex; justify-content:center; margin: 0 20px; position:relative; z-index:1; }
+
+        .search-bar{
+            width:100%;
+            max-width: 430px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding: 10px 18px;
+
+            border-radius: 999px;
+            background: rgba(0,0,0,0.22);
+            border: 1px solid rgba(255,255,255,0.10);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.25);
+
+            transition: var(--anim-speed);
+        }
+
+        .search-bar:focus-within{
+            max-width: 560px;
+            background: rgba(0,0,0,0.34);
+            border-color: rgba(0,242,255,0.55);
+            box-shadow: 0 0 25px var(--accent-glow), inset 0 2px 6px rgba(0,0,0,0.28);
+        }
+
+        .search-bar input{
+            border:none;
+            background:transparent;
+            color:#fff;
+            width:100%;
+            font-family:var(--font-body);
+            font-size:16px;
+            font-weight: 600;
+            padding:0 6px;
+        }
+
+        /* --- 6. SIDE NAV --- */
+        .side-nav{
+            position:fixed;
+            left: 18px;
+            top: 112px;
+            bottom: 18px;
+            width: 66px;
+            z-index:900;
+
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            padding: 16px 0;
+            gap: 16px;
+
+            border-radius: 999px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+        }
+
+        .nav-dot{
+            width:44px; height:44px;
+            border-radius:999px;
+            display:grid; place-items:center;
+            cursor:pointer;
+
+            color:#aaaaaa;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+
+            transition: 0.22s ease;
+            user-select:none;
+        }
+
+        .nav-dot:hover, .nav-dot.active{
+            color:#000;
+            background: var(--primary);
+            box-shadow: 0 0 18px rgba(0,242,255,0.55);
+            transform: scale(1.10);
+        }
+
+        .nav-dot span{ font-size: 20px; }
+
+        /* --- 7. CONTAINER & CARDS --- */
+        .container{
+            display:flex;
+            flex-wrap:wrap;
+            justify-content:center;
+            gap: var(--grid-gap);
+            max-width: 1800px;
+            margin: 0 auto;
+            padding-bottom: 130px;
+        }
+
+        /* Drag hint line */
+        .drag-ghost{
+            outline: 2px dashed rgba(0,242,255,0.55);
+            outline-offset: 6px;
+        }
+
+        .card{
+            width: 100%;
+            max-width: var(--max-card);
+            position:relative;
+            padding: 34px;
+            border-radius: var(--card-radius);
+
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.32);
+
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+
+            box-shadow: var(--soft-shadow), var(--inner-glow);
+
+            transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+            animation: floatUp 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+
+            transform-style: preserve-3d;
+            will-change: transform;
+
+            user-select:none;
+        }
+
+        .card[draggable="true"]{ cursor: grab; }
+        .card:active{ cursor: grabbing; }
+
+        /* Liquid highlight */
+        .card::after{
+            content:"";
+            position:absolute;
+            inset: 0;
+            border-radius: var(--card-radius);
+            pointer-events:none;
+
+            background:
+                radial-gradient(140% 90% at 10% 0%, rgba(255,255,255,0.10) 0%, transparent 60%),
+                radial-gradient(120% 80% at 90% 15%, rgba(0,242,255,0.10) 0%, transparent 55%),
+                linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 38%);
+            opacity: 0.8;
+            mix-blend-mode: screen;
+        }
+
+        /* Dynamic glare layer */
+        .card .glare{
+            position:absolute;
+            inset:-2px;
+            border-radius: var(--card-radius);
+            pointer-events:none;
+            background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.14), transparent 46%);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            mix-blend-mode: screen;
+        }
+
+        .card:hover{
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 40px 90px rgba(0,0,0,0.45), 0 0 38px rgba(0,242,255,0.23);
+            border-color: rgba(255,255,255,0.26);
+        }
+        .card:hover .glare{ opacity: 1; }
+
+        .card.zen-active{
+            position:fixed;
+            top:50%; left:50%;
+            transform: translate(-50%, -50%) scale(1.18) !important;
+            z-index: 5000;
+            max-width: 640px;
+            width: min(92vw, 640px);
+            box-shadow: 0 0 120px rgba(0,0,0,0.85), 0 0 60px rgba(0,242,255,0.15);
+            border-color: rgba(0,242,255,0.65);
+            cursor: default;
+        }
+
+        .card-header{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap: 14px;
+
+            margin-bottom: 22px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .card h2{
+            margin:0;
+            font-family: var(--font-head);
+            font-weight:700;
+            font-size: 17px;
+            color:#fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.25);
+            display:flex; align-items:center; gap:10px;
+        }
+
+        .card-subtitle{
+            font-size: 12px;
+            opacity: 0.65;
+            margin-top: 3px;
+        }
+
+        .card-controls{
+            display:flex;
+            gap: 10px;
+            align-items:center;
+        }
+
+        .card-controls span{
+            font-size:18px;
+            cursor:pointer;
+            color:#6d6d6d;
+            transition: 0.2s;
+            padding: 6px;
+            border-radius: 999px;
+            user-select:none;
+        }
+        .card-controls span:hover{
+            color: var(--primary);
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* --- inputs/buttons (preserved + softer) --- */
+        input, select, textarea{
+            width: 100%;
+            padding: 14px 18px;
+            margin: 10px 0;
+
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.12);
+
+            background: rgba(0,0,0,0.22);
+            color: #fff;
+
+            font-family: var(--font-body);
+            font-size: 16px;
+            font-weight: 600;
+
+            transition: 0.25s ease;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.28);
+        }
+
+        input:focus, select:focus, textarea:focus{
+            border-color: rgba(0,242,255,0.55);
+            background: rgba(0,0,0,0.36);
+            box-shadow: 0 0 18px rgba(0,242,255,0.22), inset 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        button{
+            width:100%;
+            padding: 15px;
+            margin-top: 14px;
+
+            border:none;
+            border-radius: var(--btn-radius);
+
+            cursor:pointer;
+            position:relative;
+            overflow:hidden;
+
+            color:#fff;
+            font-family: var(--font-head);
+            font-weight:700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 10px 28px rgba(0,0,0,0.34);
+
+            transition: 0.25s ease;
+        }
+
+        button:hover{
+            transform: translateY(-2px);
+            filter: brightness(1.12);
+            box-shadow: 0 16px 36px rgba(188,19,254,0.35);
+        }
+
+        button:active{ transform: translateY(0px) scale(0.99); }
+
+        .btn-ghost{
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            text-transform:none;
+            letter-spacing:0.3px;
+        }
+
+        .btn-danger{
+            background: rgba(255,50,90,0.18);
+            border: 1px solid rgba(255,80,110,0.28);
+            color: #ffd1da;
+        }
+
+        .btn-ok{
+            background: rgba(53,255,154,0.14);
+            border: 1px solid rgba(53,255,154,0.28);
+            color: #b8ffdd;
+        }
+
+        /* Utility */
+        .row{ display:flex; gap: 10px; }
+        .hidden{ display:none !important; }
+        .badge{
+            background: rgba(255,255,255,0.12);
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-left: auto;
+            border: 1px solid rgba(255,255,255,0.10);
+        }
+        .output-text{ opacity:0.92; }
+        .result-val{
+            color: var(--primary);
+            font-weight: 800;
+            cursor:pointer;
+            border-bottom: 1px dashed rgba(255,255,255,0.30);
+        }
+
+        .mini{
+            font-size: 12px;
+            opacity: 0.72;
+            line-height: 1.35;
+        }
+
+        .chip{
+            display:inline-flex;
+            gap:8px;
+            align-items:center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .chips{ display:flex; flex-wrap:wrap; gap:10px; margin-top: 12px; }
+
+        /* Notes area (preserved) */
+        .sticky-note{
+            background: rgba(255, 240, 0, 0.08);
+            color: #ffef7a;
+            border: 1px dashed rgba(255, 235, 59, 0.28);
+            min-height: 160px;
+            resize: vertical;
+        }
+
+        /* Visualizer (preserved) */
+        #vizCanvas{
+            width:100%;
+            height: 60px;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.28);
+            margin-top: 10px;
+        }
+
+        /* Overlay for Zen Mode */
+        #zenOverlay{
+            position:fixed;
+            inset:0;
+            z-index:4000;
+            opacity:0;
+            pointer-events:none;
+            background: rgba(5,5,10,0.90);
+            backdrop-filter: blur(12px) saturate(120%);
+            transition: 0.45s ease;
+        }
+        #zenOverlay.active{ opacity:1; pointer-events:all; }
+
+        /* Toasts */
+        #toastContainer{
+            position: fixed;
+            bottom: 26px;
+            right: 26px;
+            z-index: 6000;
+            display:flex;
+            flex-direction:column;
+            gap: 10px;
+            pointer-events:none;
+        }
+
+        .toast{
+            pointer-events:auto;
+            border-radius: 18px;
+            padding: 14px 14px;
+            min-width: 240px;
+            max-width: 380px;
+
+            background: rgba(18,18,28,0.94);
+            border: 1px solid rgba(255,255,255,0.10);
+            box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+
+            display:flex;
+            gap: 10px;
+            align-items:flex-start;
+
+            backdrop-filter: blur(16px);
+        }
+
+        .toast b{ font-family:var(--font-head); font-size: 12px; letter-spacing:0.8px; }
+        .toast .t-msg{ font-weight:700; opacity:0.95; }
+        .toast .t-sub{ font-size: 12px; opacity:0.65; margin-top:2px; }
+
+        /* Modals */
+        .modal{
+            position:fixed;
+            inset:0;
+            z-index: 8000;
+            display:none;
+            place-items:center;
+            padding: 22px;
+            background: rgba(0,0,0,0.70);
+            backdrop-filter: blur(12px);
+        }
+
+        .modal.active{ display:grid; }
+
+        .modal-card{
+            width: min(980px, 95vw);
+            border-radius: 34px;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(15,15,25,0.70);
+            box-shadow: 0 30px 110px rgba(0,0,0,0.68);
+
+            backdrop-filter: blur(22px) saturate(140%);
+            -webkit-backdrop-filter: blur(22px) saturate(140%);
+            overflow:hidden;
+            position:relative;
+        }
+
+        .modal-card::after{
+            content:"";
+            position:absolute; inset: 0;
+            pointer-events:none;
+            background:
+                radial-gradient(120% 120% at 10% 0%, rgba(255,255,255,0.10), transparent 60%),
+                radial-gradient(120% 120% at 90% 100%, rgba(0,242,255,0.08), transparent 55%);
+            mix-blend-mode: screen;
+            opacity:0.9;
+        }
+
+        .modal-head{
+            position:relative;
+            z-index:1;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap: 14px;
+
+            padding: 18px 22px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .modal-head h3{
+            margin:0;
+            font-family: var(--font-head);
+            font-size: 14px;
+            letter-spacing: 1px;
+            opacity: 0.92;
+        }
+
+        .modal-body{
+            position:relative;
+            z-index:1;
+            padding: 18px 22px 22px;
+            display:grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px;
+        }
+
+        .panel{
+            padding: 16px;
+            border-radius: 26px;
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.04);
+        }
+
+        .panel h4{
+            margin: 0 0 10px;
+            font-family: var(--font-head);
+            font-size: 12px;
+            letter-spacing: 1px;
+            opacity: 0.82;
+        }
+
+        .panel .hint{
+            font-size: 12px;
+            opacity: 0.65;
+            line-height: 1.4;
+        }
+
+        .kv{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap: 10px;
+            padding: 10px 10px;
+            border-radius: 18px;
+            background: rgba(0,0,0,0.18);
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-top: 10px;
+        }
+        .kv label{ font-weight:800; font-size: 12px; opacity:0.9; }
+        .kv .value{ font-weight:800; color: var(--primary); }
+
+        /* Command palette */
+        #cmdPalette .modal-card{
+            width: min(760px, 95vw);
+        }
+        #cmdInput{
+            width: 100%;
+            margin: 0;
+            font-size: 16px;
+            padding: 14px 18px;
+            border-radius: 22px;
+        }
+        .cmd-list{
+            margin-top: 12px;
+            display:flex;
+            flex-direction:column;
+            gap: 10px;
+            max-height: 380px;
+            overflow:auto;
+            padding-right: 6px;
+        }
+        .cmd-item{
+            padding: 12px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.04);
+            display:flex;
+            gap: 10px;
+            align-items:center;
+            cursor:pointer;
+            transition: 0.2s ease;
+        }
+        .cmd-item:hover{
+            background: rgba(0,242,255,0.08);
+            border-color: rgba(0,242,255,0.28);
+            transform: translateY(-1px);
+        }
+        .cmd-item .title{ font-weight:900; }
+        .cmd-item .tags{ font-size: 12px; opacity: 0.6; }
+
+        /* Markdown preview */
+        .md-wrap{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .md-preview{
+            border-radius: 22px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(0,0,0,0.18);
+            min-height: 210px;
+            overflow:auto;
+        }
+        .md-preview h1,.md-preview h2,.md-preview h3{ font-family: var(--font-head); }
+        .md-preview code{
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+        .md-preview pre{
+            padding: 12px;
+            border-radius: 18px;
+            background: rgba(0,0,0,0.30);
+            border: 1px solid rgba(255,255,255,0.10);
+            overflow:auto;
+        }
+
+        /* Kanban */
+        .kanban{
+            display:grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .kcol{
+            padding: 10px;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(0,0,0,0.16);
+            min-height: 170px;
+        }
+        .kcol h5{
+            margin: 0 0 8px;
+            font-family: var(--font-head);
+            font-size: 11px;
+            letter-spacing: 1px;
+            opacity:0.85;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap: 8px;
+        }
+        .kitem{
+            padding: 10px 10px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            margin-top: 8px;
+            font-weight: 700;
+            cursor: grab;
+            user-select:none;
+        }
+        .kitem:active{ cursor:grabbing; }
+        .kitem small{ display:block; opacity:0.60; margin-top: 4px; font-weight: 600; }
+
+        /* Animations */
+        @keyframes floatUp{
+            from{ opacity:0; transform: translateY(50px) scale(0.92); }
+            to{ opacity:1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes micPulse{
+            0%{ text-shadow: 0 0 0px #ff3333; }
+            50%{ text-shadow: 0 0 15px #ff3333; transform: scale(1.1); }
+            100%{ text-shadow: 0 0 0px #ff3333; }
+        }
+        .mic-active{ color: #ff3333 !important; animation: micPulse 1s infinite; }
+
+        @media (max-width: 980px){
+            body{ padding: 96px 14px 40px 14px; }
+            .side-nav{ display:none; }
+            .modal-body{ grid-template-columns: 1fr; }
+            .md-wrap{ grid-template-columns: 1fr; }
+        }
+        /* ===== Mobile HUD fix (<= 420px) ===== */
+        @media (max-width: 420px){
+            /* HUD становится "в 2 строки": верх — лого+кнопки, низ — поиск */
+            .hud{
+                height: auto;
+                padding: 12px 12px;
+                border-radius: 22px;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .hud-left{
+                flex: 1 1 auto;
+                min-width: 0; /* критично для обрезки текста */
+                gap: 10px;
+            }
+
+            .hud-title{
+                font-size: 16px;
+                line-height: 1.05;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 52vw;
+            }
+
+            .hud-sub{ display:none; } /* на узком экране лучше скрыть */
+
+            .hud-right{
+                flex: 0 0 auto;
+                gap: 8px;
+            }
+
+            .icon-btn{
+                width: 38px;
+                height: 38px;
+            }
+
+            .search-container{
+                order: 3;
+                flex: 1 1 100%;
+                margin: 0;
+                justify-content: stretch;
+            }
+
+            .search-bar{
+                max-width: none;
+                width: 100%;
+                padding: 10px 14px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce){
+            *{ scroll-behavior:auto !important; }
+            .card{ transition:none !important; animation:none !important; }
+        }
+
+        /* ===== Mobile (<= 720px) ===== */
+            @media (max-width: 720px){
+            body{ overflow-x:hidden; }
+
+            /* Основной контейнер */
+            .container, .wrap, .app, main{
+                width:100%;
+                max-width: 100%;
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            /* Если карточки стоят в grid/columns */
+            .grid, .cards, .panel-grid{
+                display:grid;
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+            }
+
+            /* Карточки */
+            .card, .panel, .glass{
+                border-radius: 18px;
+                padding: 14px;
+            }
+
+            /* Заголовки/крупные значения */
+            h1{ font-size: 22px; }
+            h2{ font-size: 16px; }
+
+            .result-main .value{ font-size: 20px; }
+
+            /* Кнопки: на телефоне крупнее и удобнее */
+            button, .btn, .chip{
+                min-height: 44px;               /* зона касания */
+                padding: 12px 14px;
+            }
+
+            /* Инпуты */
+            input, select{
+                min-height: 44px;
+                font-size: 16px;                /* фикс iOS zoom */
+            }
+
+            /* Мелкие кнопки-таблетки */
+            .btn-mini{
+                min-height: 40px;
+                padding: 10px 12px;
+            }
+
+            /* Ряды контролов (если стоят в одну строку) */
+            .row, .controls, .toolbar, .actions{
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .row > *, .controls > *, .toolbar > *{
+                flex: 1 1 160px;                /* чтобы элементы переносились */
+            }
+
+            /* Таблицы: горизонтальный скролл без ломания верстки */
+            .table-wrap, #creditTable{
+                overflow:auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            table{ min-width: 560px; }        /* чтобы колонки не слипались */
+            }
+            /* ===== Card header overflow fix ===== */
+            .card-header > div:first-child{
+            min-width: 0; /* позволяет тексту сжиматься внутри flex */
+            }
+
+            .card h2{
+            min-width: 0;
+            flex-wrap: wrap;
+            }
+
+            .card-subtitle{
+            overflow-wrap: anywhere; /* длинные строки/символы не ломают блок */
+            word-break: break-word;
+            }
+
+            /* чтобы длинные строки не ломали стекло */
+            .card, .panel, .result-panel, .mini, .output-text{
+            overflow-wrap: anywhere;
+            }
+
+
+
+    </style>
+</head>
+<body>
+    
+
+    <!-- Background layers -->
+    <canvas id="particleCanvas"></canvas>
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Zen overlay preserved -->
+    <div id="zenOverlay" onclick="exitZenMode()"></div>
+
+    <!-- Modals -->
+    <div class="modal" id="settingsModal" onclick="if(event.target.id==='settingsModal') closeSettings()">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>НАСТРОЙКИ :: Liquid OS</h3>
+                <div class="row" style="gap:10px; width: 220px;">
+                    <button class="btn-ghost" onclick="resetSettings()" style="margin-top:0;">Сброс</button>
+                    <button onclick="closeSettings()" style="margin-top:0;">Закрыть</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="panel">
+                    <h4>ТЕМА И СТЕКЛО</h4>
+                    <div class="hint">Изменения сохраняются локально (localStorage). Все старые функции остаются нетронутыми.</div>
+
+                    <div class="kv">
+                        <label>Accent (Primary)</label>
+                        <div class="row" style="align-items:center;">
+                            <input id="accentPicker" type="color" value="#00f2ff" style="width:54px; padding:8px; margin:0; border-radius:14px;">
+                            <span class="value" id="accentHex">#00f2ff</span>
+                        </div>
+                    </div>
+
+                    <div class="kv">
+                        <label>Blur</label>
+                        <div class="row" style="align-items:center;">
+                            <input id="blurSlider" type="range" min="18" max="44" value="30" style="width: 160px; margin:0; padding:0;">
+                            <span class="value" id="blurVal">30</span>
+                        </div>
+                    </div>
+
+                    <div class="kv">
+                        <label>Saturation</label>
+                        <div class="row" style="align-items:center;">
+                            <input id="satSlider" type="range" min="105" max="220" value="140" style="width: 160px; margin:0; padding:0;">
+                            <span class="value" id="satVal">140%</span>
+                        </div>
+                    </div>
+
+                    <div class="kv">
+                        <label>Noise</label>
+                        <div class="row" style="align-items:center;">
+                            <input id="noiseSlider" type="range" min="0" max="0.18" step="0.01" value="0.05" style="width: 160px; margin:0; padding:0;">
+                            <span class="value" id="noiseVal">0.05</span>
+                        </div>
+                    </div>
+
+                    <div class="kv">
+                        <label>Spotlight</label>
+                        <div class="row" style="align-items:center;">
+                            <input id="spotSlider" type="range" min="0.05" max="0.35" step="0.01" value="0.22" style="width: 160px; margin:0; padding:0;">
+                            <span class="value" id="spotVal">0.22</span>
+                        </div>
+                    </div>
+
+                    <div class="row" style="gap:10px;">
+                        <button class="btn-ok" onclick="applySettingsFromUI()">Применить</button>
+                        <button class="btn-ghost" onclick="toggleCardTilt()">3D Tilt: <b id="tiltState">ON</b></button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h4>ГОРЯЧИЕ КЛАВИШИ И СИСТЕМА</h4>
+                    <div class="hint">
+                        • <b>Ctrl+K</b> — Командная палитра<br>
+                        • <b>Ctrl+Shift+L</b> — Lock/Unlock Drag & Drop карточек<br>
+                        • <b>Esc</b> — Закрыть модальные окна / выйти из Zen
+                    </div>
+
+                    <div class="kv">
+                        <label>Перетаскивание карточек</label>
+                        <span class="value" id="dragState">ON</span>
+                    </div>
+
+                    <div class="row" style="gap:10px;">
+                        <button class="btn-ghost" onclick="exportState()">Export</button>
+                        <button class="btn-ghost" onclick="importState()">Import</button>
+                    </div>
+
+                    <div style="margin-top: 12px;">
+                        <div class="chip"><span class="material-symbols-outlined" style="font-size:18px;">tips_and_updates</span> Подсказка: можно менять порядок карточек, это сохранится.</div>
+                    </div>
+
+                    <div class="chips">
+                        <div class="chip"><span class="material-symbols-outlined" style="font-size:18px;">network_check</span> Онлайн-виджеты</div>
+                        <div class="chip"><span class="material-symbols-outlined" style="font-size:18px;">lock_clock</span> Локальное хранение</div>
+                        <div class="chip"><span class="material-symbols-outlined" style="font-size:18px;">blur_on</span> Мягкое стекло</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="cmdPalette" onclick="if(event.target.id==='cmdPalette') closeCmdPalette()">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>КОМАНДНАЯ ПАЛИТРА</h3>
+                <div class="row" style="gap:10px; width: 190px;">
+                    <button class="btn-ghost" onclick="closeCmdPalette()" style="margin-top:0;">Закрыть</button>
+                    <button onclick="openSettings()" style="margin-top:0;">Settings</button>
+                </div>
+            </div>
+            <div class="modal-body" style="grid-template-columns: 1fr;">
+                <div class="panel">
+                    <input id="cmdInput" placeholder="Искать: модуль, действие, команда... (например: 'кредит', 'таймер', 'очистить')" />
+                    <div class="cmd-list" id="cmdList"></div>
+                    <div class="mini" style="margin-top:10px;">
+                        Enter — выполнить выделенное (или первое). Стрелки — навигация. Esc — закрыть.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HUD preserved + extended buttons -->
+    <nav class="hud">
+        <div class="hud-left">
+            <span class="material-symbols-outlined" style="color:var(--primary); font-size: 32px;">water_drop</span>
+            <div>
+                <div class="hud-title">Liquid OS</div>
+                <div class="hud-sub">MADE BY DEMENTIEV D.A.</div>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <div class="search-bar">
+                <span class="material-symbols-outlined" style="opacity:0.55;">search</span>
+                <input type="text" id="cardSearch" placeholder="Поиск модулей..." />
+                <span class="material-symbols-outlined" id="micBtn" onclick="toggleVoice()" style="cursor:pointer; opacity:0.75; font-size:20px;" title="Голосовое управление">mic</span>
+                <span class="material-symbols-outlined" class="icon-btn" onclick="openCmdPalette()" style="cursor:pointer; opacity:0.75; font-size:20px;" title="Командная палитра (Ctrl+K)">keyboard_command_key</span>
+            </div>
+        </div>
+
+        <div class="hud-right">
+            <span class="material-symbols-outlined icon-btn" onclick="openHistory()" title="История">history</span>
+            <span class="material-symbols-outlined icon-btn" onclick="openSettings()" title="Настройки">settings</span>
+        </div>
+    </nav>
+
+    <!-- Side nav preserved + extended anchors -->
+    <div class="side-nav">
+        <div class="nav-dot" onclick="scrollToId('physics')" title="Физика"><span class="material-symbols-outlined">rocket_launch</span></div>
+        <div class="nav-dot" onclick="scrollToId('math')" title="Математика"><span class="material-symbols-outlined">functions</span></div>
+        <div class="nav-dot" onclick="scrollToId('tools')" title="Инструменты"><span class="material-symbols-outlined">construction</span></div>
+        <div class="nav-dot" onclick="scrollToId('finance')" title="Финансы"><span class="material-symbols-outlined">payments</span></div>
+        <div class="nav-dot" onclick="scrollToId('focus')" title="Фокус"><span class="material-symbols-outlined">timer</span></div>
+        <div class="nav-dot" onclick="scrollToId('notes')" title="Заметки"><span class="material-symbols-outlined">edit_note</span></div>
+        <div class="nav-dot" onclick="scrollToId('kanban')" title="Kanban"><span class="material-symbols-outlined">view_kanban</span></div>
+        <div class="nav-dot" onclick="scrollToId('markdown')" title="Markdown"><span class="material-symbols-outlined">markdown</span></div>
+        <div class="nav-dot" onclick="scrollToId('quick')" title="Quick Tools"><span class="material-symbols-outlined">bolt</span></div>
+        <div class="nav-dot" onclick="scrollToId('net')" title="Net Widgets"><span class="material-symbols-outlined">public</span></div>
+    </div>
+
+    <!-- MAIN CARDS -->
+    <div class="container" id="cardContainer">
+
+        <!-- =======================
+             OLD CARDS (PRESERVED)
+             ======================= -->
+
+        <div class="card" id="physics" data-tags="ускорение сила физика" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">rocket_launch</span> Физика</h2>
+                    <div class="card-subtitle">F=ma → a=F/m (быстро и удобно)</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('physics')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+            <input id="mass" type="number" placeholder="Масса (m, кг)" />
+            <input id="forse" type="number" placeholder="Сила (F, Ньютон)" />
+            <button onclick="calcPhysics()">Рассчитать (a)</button>
+            <div class="result-panel" id="physPanel" data-status="idle">
+            <div class="result-main" id="res-phys">Ожидание данных...</div>
+            <div class="result-meta" id="physMeta"></div>
+
+            <div class="result-actions">
+                <button class="btn-ghost btn-mini" onclick="copyResultText('physPanel')">Copy</button>
+                <button class="btn-ghost btn-mini" onclick="resetPhysics()">Reset</button>
+                <button class="btn-ghost btn-mini" onclick="toggleDetails('steps-physics')">Шаги</button>
+            </div>
+
+            <details class="steps" id="steps-physics">
+                <summary>Шаги расчёта</summary>
+                <div class="steps-body" id="steps-physics-body"></div>
+            </details>
+            </div>
+        </div>
+
+        <div class="card" id="math" data-tags="сумма математика" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">calculate</span> Сумма нечетных</h2>
+                    <div class="card-subtitle">Σ(1..N, шаг 2) — за 1 клик</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('math')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+            <input id="num" type="number" placeholder="Лимит (N)" />
+            <button onclick="calcSum()">Рассчитать Σ</button>
+            <div class="result-panel" id="sumPanel" data-status="idle">
+            <div class="result-main" id="res-sum">Ожидание данных...</div>
+            <div class="result-meta" id="sumMeta"></div>
+
+            <div class="result-actions">
+                <button class="btn-ghost btn-mini" onclick="copyResultText('sumPanel')">Copy</button>
+                <button class="btn-ghost btn-mini" onclick="resetSum()">Reset</button>
+                <button class="btn-ghost btn-mini" onclick="toggleDetails('steps-sum')">Шаги</button>
+            </div>
+
+            <details class="steps" id="steps-sum">
+                <summary>Пояснение</summary>
+                <div class="steps-body" id="steps-sum-body"></div>
+            </details>
+            </div>
+        </div>
+
+        <div class="card" id="tools" data-tags="конвертер единицы перевод" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">transform</span> Конвертер</h2>
+                    <div class="card-subtitle">Длина / Вес / Данные</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('tools')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+            <div class="row">
+                <select id="convType" onchange="updateConvUnits()">
+                    <option value="dist">Длина</option>
+                    <option value="weight">Вес</option>
+                    <option value="data">Данные</option>
+                </select>
+            </div>
+            <div class="row">
+                <input id="convVal" type="number" placeholder="Значение" oninput="runConv()">
+                <select id="convUnitFrom" onchange="runConv()"></select>
+            </div>
+            <div style="text-align:center; font-size: 24px; margin: 10px 0;">⬇</div>
+            <div class="row">
+                <input id="convRes" type="text" readonly placeholder="Результат" style="background: rgba(255,255,255,0.05);">
+                <select id="convUnitTo" onchange="runConv()"></select>
+            </div>
+        </div>
+
+        <div class="card" data-tags="оценки средний gpa" id="gpa" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">school</span> GPA Калькулятор</h2>
+                    <div class="card-subtitle">Средняя оценка по 3 значениям</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('gpa')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+            <div class="row">
+                <input id="gr1" type="number" placeholder="Оценка" min="1" max="100" />
+                <input id="gr2" type="number" placeholder="Оценка" min="1" max="100" />
+                <input id="gr3" type="number" placeholder="Оценка" min="1" max="100" />
+            </div>
+            <button onclick="calcGrade()">Рассчитать</button>
+            <div class="result-panel" id="gpaPanel" data-status="idle">
+            <div class="result-main" id="res-grade">Введите оценки</div>
+            <div class="result-meta" id="gpaMeta"></div>
+
+            <div class="result-actions">
+                <button class="btn-ghost btn-mini" onclick="copyResultText('gpaPanel')">Copy</button>
+                <button class="btn-ghost btn-mini" onclick="exportGpaCSV()">Export CSV</button>
+                <button class="btn-ghost btn-mini" onclick="resetGpa()">Reset</button>
+            </div>
+            </div>
+        </div>
+
+        <div class="card" data-tags="пароль безопасность генератор" id="passgen" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">vpn_key</span> Pass Generator</h2>
+                    <div class="card-subtitle">Автокопирование + гибкая длина</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('passgen')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span>Длина: <b id="pwdLenVal">12</b></span>
+                <input type="range" id="pwdLen" min="6" max="32" value="12" style="width:60%; margin:0;" oninput="document.getElementById('pwdLenVal').innerText = this.value">
+            </div>
+            <div class="row" style="font-size: 14px; margin-bottom: 15px; justify-content: space-around;">
+                <label><input type="checkbox" id="pwdUpper" checked style="width:auto;"> A-Z</label>
+                <label><input type="checkbox" id="pwdNum" checked style="width:auto;"> 0-9</label>
+                <label><input type="checkbox" id="pwdSym" style="width:auto;"> @#$</label>
+            </div>
+            <input id="pwdOut" type="text" readonly style="font-family: monospace; letter-spacing: 2px; text-align: center; color: var(--primary); font-weight: bold;">
+            <button onclick="genPassword()">Сгенерировать</button>
+        </div>
+
+        <div class="card" id="finance" style="max-width: 520px;" data-tags="кредит банк финансы" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">account_balance</span> Кредитный план</h2>
+                    <div class="card-subtitle">Платёж по аннуитету</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('finance')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+            <input id="loanAmount" type="number" placeholder="Сумма кредита (₽)" />
+            <div class="row">
+                <input id="loanTerm" type="number" placeholder="Срок (мес)" />
+                <input id="loanRate" type="number" placeholder="Ставка (%)" />
+            </div>
+            <button onclick="calcCredit()">Рассчитать</button>
+            <div class="result-actions" style="margin-top:12px;">
+            <button class="btn-ghost btn-mini" onclick="copyCreditSummary()">Copy</button>
+            <button class="btn-ghost btn-mini" onclick="exportCreditCSV()">Export CSV</button>
+            <button class="btn-ghost btn-mini" onclick="resetCredit()">Reset</button>
+            </div>
+            <div id="creditSummary" class="hidden" style="margin-top:15px; text-align:center; font-size:14px;"></div>
+            <div id="creditTable" class="hidden" style="margin-top:12px; max-height:260px; overflow:auto;"></div>
+        </div>
+
+        <div class="card" id="notes" data-tags="заметки текст" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">edit_note</span> Smart Notes</h2>
+                    <div class="card-subtitle">Автосохранение локально</div>
+                </div>
+                <span class="badge" id="noteStatus">Saved</span>
+                <div class="card-controls" style="margin-left: 10px;">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="exportNotes()" title="Экспорт заметки">download</span>
+                </div>
+            </div>
+            <textarea id="quickNote" class="sticky-note" placeholder="Пишите здесь... (автосохранение)"></textarea>
+            <div class="row" style="gap:10px;">
+                <button class="btn-ghost" onclick="document.getElementById('quickNote').value=''; localStorage.setItem('liq_note',''); showToast('Заметка очищена')">Очистить</button>
+                <button onclick="summarizeNoteLocal()">Mini-summary</button>
+            </div>
+        </div>
+
+        <div class="card" id="focus" data-tags="таймер фокус музыка" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">spatial_audio_off</span> Focus & Audio</h2>
+                    <div class="card-subtitle">Pomodoro + аудио-визуал</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="copyCardLink('focus')" title="Скопировать ссылку">link</span>
+                </div>
+            </div>
+
+            <div style="text-align:center;">
+                <h1 id="timerDisplay" style="font-size:48px; margin:10px 0; font-family: var(--font-head);">25:00</h1>
+                <canvas id="vizCanvas" height="60"></canvas>
+            </div>
+
+            <div class="row">
+                <button onclick="startTimer()">Старт</button>
+                <button onclick="resetTimer()" class="btn-danger">Стоп</button>
+            </div>
+
+            <!-- v5: quick preset -->
+            <div class="chips" style="margin-top: 12px;">
+                <div class="chip" onclick="setPomodoroPreset(15)" title="15 мин"><span class="material-symbols-outlined" style="font-size:18px;">schedule</span> 15m</div>
+                <div class="chip" onclick="setPomodoroPreset(25)" title="25 мин"><span class="material-symbols-outlined" style="font-size:18px;">timer</span> 25m</div>
+                <div class="chip" onclick="setPomodoroPreset(50)" title="50 мин"><span class="material-symbols-outlined" style="font-size:18px;">hourglass_top</span> 50m</div>
+                
+            </div>
+        </div>
+
+        <!-- =======================
+             NEW CARDS (V5+)
+             ======================= -->
+
+        <div class="card" id="kanban" data-tags="задачи todo kanban планер" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">view_kanban</span> Kanban Tasks</h2>
+                    <div class="card-subtitle">Мини-доска задач (drag внутри)</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="resetKanban()" title="Сбросить">restart_alt</span>
+                </div>
+            </div>
+
+            <div class="row">
+                <input id="kanbanText" placeholder="Новая задача..." />
+                <button onclick="addKanbanItem()" style="width: 170px; margin-top: 10px;">Добавить</button>
+            </div>
+
+            <div class="kanban">
+                <div class="kcol" data-col="todo" ondragover="kAllow(event)" ondrop="kDrop(event)">
+                    <h5>TODO <span class="badge" id="kTodoN">0</span></h5>
+                    <div id="kTodo"></div>
+                </div>
+                <div class="kcol" data-col="doing" ondragover="kAllow(event)" ondrop="kDrop(event)">
+                    <h5>DOING <span class="badge" id="kDoingN">0</span></h5>
+                    <div id="kDoing"></div>
+                </div>
+                <div class="kcol" data-col="done" ondragover="kAllow(event)" ondrop="kDrop(event)">
+                    <h5>DONE <span class="badge" id="kDoneN">0</span></h5>
+                    <div id="kDone"></div>
+                </div>
+            </div>
+
+            <div class="mini" style="margin-top: 10px;">
+                Поддерживает сохранение и drag&drop карточек задач.
+            </div>
+        </div>
+
+        <div class="card" id="markdown" data-tags="markdown заметки редактор форматирование" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">markdown</span> Markdown Studio</h2>
+                    <div class="card-subtitle">Редактор + живой preview (локально)</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="saveMarkdown()" title="Сохранить">save</span>
+                </div>
+            </div>
+
+            <div class="md-wrap">
+                <textarea id="mdInput" placeholder="# Заголовок
+
+**жирный**, *курсив*, `код`
+
+- список
+- пункт
+
+```js
+console.log('hello');
+```" style="min-height: 210px; resize: vertical;"></textarea>
+                <div class="md-preview" id="mdPreview">Preview...</div>
+            </div>
+
+            <div class="row" style="gap:10px;">
+                <button class="btn-ghost" onclick="loadMarkdown()">Load</button>
+                <button onclick="copyMarkdownHtml()">Copy HTML</button>
+            </div>
+        </div>
+
+        <div class="card" id="quick" data-tags="калькулятор проценты скидка налог текст статистика" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">bolt</span> Quick Tools</h2>
+                    <div class="card-subtitle">Проценты + статистика текста</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="clearQuickTools()" title="Очистить">delete_sweep</span>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Калькулятор процентов</h4>
+                <div class="row">
+                    <input id="pctBase" type="number" placeholder="База (например 1200)" />
+                    <input id="pctRate" type="number" placeholder="% (например 15)" />
+                </div>
+                <div class="row">
+                    <button onclick="calcPercent('+')">+%</button>
+                    <button onclick="calcPercent('-')" class="btn-danger">-%</button>
+                    <button onclick="calcPercent('only')" class="btn-ghost">Только %</button>
+                </div>
+                <p id="pctOut" class="output-text" style="text-align:center; margin:10px 0 0;">Ожидание данных...</p>
+            </div>
+
+            <div style="height: 10px;"></div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Статистика текста</h4>
+                <textarea id="textStatsIn" placeholder="Вставьте текст..." style="min-height: 100px;"></textarea>
+                <div class="row" style="gap:10px;">
+                    <button onclick="runTextStats()">Посчитать</button>
+                    <button class="btn-ghost" onclick="copyTextStats()">Copy</button>
+                </div>
+                <div id="textStatsOut" class="mini" style="margin-top:10px; opacity:0.9;"></div>
+            </div>
+        </div>
+
+        <div class="card" id="qr" data-tags="qr код генератор ссылка wi-fi" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">qr_code</span> QR Generator</h2>
+                    <div class="card-subtitle">Текст/URL/Wi-Fi → QR (если доступна библиотека)</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="downloadQR()" title="Скачать PNG">download</span>
+                </div>
+            </div>
+
+            <select id="qrMode" onchange="switchQRMode()">
+                <option value="text">Текст / URL</option>
+                <option value="wifi">Wi-Fi</option>
+            </select>
+
+            <div id="qrTextMode">
+                <input id="qrText" placeholder="Вставьте текст или ссылку..." />
+            </div>
+
+            <div id="qrWifiMode" class="hidden">
+                <input id="wifiSsid" placeholder="Wi-Fi SSID" />
+                <div class="row">
+                    <input id="wifiPass" placeholder="Пароль" />
+                    <select id="wifiType">
+                        <option value="WPA">WPA/WPA2</option>
+                        <option value="WEP">WEP</option>
+                        <option value="nopass">Без пароля</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="renderQR()">Сгенерировать QR</button>
+
+            <div style="display:flex; justify-content:center; margin-top:12px;">
+                <canvas id="qrCanvas" width="220" height="220" style="border-radius: 22px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.10);"></canvas>
+            </div>
+
+            <div class="mini" id="qrHint" style="margin-top:10px;">
+                Если QR не генерируется — проверь доступ к CDN (jsdelivr).
+            </div>
+        </div>
+
+        <div class="card" id="net" data-tags="онлайн погода валюты крипто время" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">public</span> Net Widgets</h2>
+                    <div class="card-subtitle">Погода / валюта / крипто (fetch)</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="refreshNetWidgets()" title="Обновить">refresh</span>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Погода (Open-Meteo)</h4>
+                <div class="row">
+                    <input id="wCity" placeholder="Город (например Amsterdam)" />
+                    <button onclick="fetchWeather()" style="width: 170px; margin-top: 10px;">Получить</button>
+                </div>
+                <div id="wOut" class="mini" style="margin-top:10px;"></div>
+            </div>
+
+            <div style="height: 10px;"></div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Курс валют (exchangerate.host)</h4>
+                <div class="row">
+                    <input id="fxAmount" type="number" placeholder="Сумма" />
+                    <select id="fxFrom">
+                        <option>EUR</option><option>USD</option><option>RUB</option><option>GBP</option><option>JPY</option><option>CNY</option>
+                    </select>
+                    <select id="fxTo">
+                        <option>USD</option><option>EUR</option><option>RUB</option><option>GBP</option><option>JPY</option><option>CNY</option>
+                    </select>
+                </div>
+                <button onclick="fetchFX()">Конвертировать</button>
+                <div id="fxOut" class="mini" style="margin-top:10px;"></div>
+            </div>
+
+            <div style="height: 10px;"></div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Крипто (CoinGecko)</h4>
+                <div class="row">
+                    <select id="cgCoin">
+                        <option value="bitcoin">bitcoin</option>
+                        <option value="ethereum">ethereum</option>
+                        <option value="solana">solana</option>
+                        <option value="toncoin">toncoin</option>
+                    </select>
+                    <select id="cgCur">
+                        <option value="usd">USD</option>
+                        <option value="eur">EUR</option>
+                        <option value="rub">RUB</option>
+                    </select>
+                </div>
+                <button onclick="fetchCrypto()">Получить цену</button>
+                <div id="cgOut" class="mini" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <div class="card" id="timekit" data-tags="время мировое часы секундомер сон будильник" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">schedule</span> TimeKit</h2>
+                    <div class="card-subtitle">Мировые часы + секундомер + сон</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="syncClocks()" title="Обновить">sync</span>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Мировые часы</h4>
+                <div class="row">
+                    <select id="tz1">
+                        <option value="Europe/Amsterdam">Europe/Amsterdam</option>
+                        <option value="Europe/Moscow">Europe/Moscow</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo</option>
+                    </select>
+                    <select id="tz2">
+                        <option value="Europe/Moscow">Europe/Moscow</option>
+                        <option value="Europe/Amsterdam">Europe/Amsterdam</option>
+                        <option value="America/Los_Angeles">America/Los_Angeles</option>
+                        <option value="Asia/Dubai">Asia/Dubai</option>
+                        <option value="Asia/Shanghai">Asia/Shanghai</option>
+                    </select>
+                </div>
+                <div class="mini" id="tzOut" style="margin-top:10px;"></div>
+            </div>
+
+            <div style="height: 10px;"></div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Секундомер</h4>
+                <div style="display:flex; justify-content:center;">
+                    <div id="swOut" style="font-family: var(--font-head); font-size: 28px;">00:00.0</div>
+                </div>
+                <div class="row" style="margin-top:10px;">
+                    <button onclick="swStart()">Start</button>
+                    <button class="btn-ghost" onclick="swLap()">Lap</button>
+                    <button class="btn-danger" onclick="swReset()">Reset</button>
+                </div>
+                <div id="swLaps" class="mini" style="margin-top:10px; max-height: 90px; overflow:auto;"></div>
+            </div>
+
+            <div style="height: 10px;"></div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px;">
+                <h4 style="margin:0 0 10px;">Сон (90-мин циклы)</h4>
+                <div class="row">
+                    <input id="sleepWake" type="time" />
+                    <button onclick="calcSleep()" style="width: 170px; margin-top: 10px;">Посчитать</button>
+                </div>
+                <div id="sleepOut" class="mini" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <div class="card" id="lab" data-tags="графики таблица csv экспорт" draggable="true">
+            <div class="glare"></div>
+            <div class="card-header">
+                <div>
+                    <h2><span class="material-symbols-outlined">science</span> Lab Pad</h2>
+                    <div class="card-subtitle">Мини-таблица → CSV (локально)</div>
+                </div>
+                <div class="card-controls">
+                    <span class="material-symbols-outlined" onclick="toggleZen(this)" title="Zen">push_pin</span>
+                    <span class="material-symbols-outlined" onclick="labAddRow()" title="Добавить строку">add</span>
+                    <span class="material-symbols-outlined" onclick="labExportCSV()" title="Экспорт CSV">download</span>
+                </div>
+            </div>
+
+            <div class="mini">
+                Быстрый блокнот измерений: (x, y). Можно добавлять строки и выгружать CSV.
+            </div>
+
+            <div class="panel" style="padding: 12px; border-radius: 26px; margin-top: 10px;">
+                <div class="row" style="font-size: 12px; opacity: 0.7;">
+                    <div style="flex:1; text-align:center;">x</div>
+                    <div style="flex:1; text-align:center;">y</div>
+                </div>
+                <div id="labTable"></div>
+                <button class="btn-ghost" onclick="labCompute()" style="margin-top: 10px;">Среднее / σ</button>
+                <div id="labOut" class="mini" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toasts preserved container -->
+    <div id="toastContainer"></div>
+
+    <script>
+        /**
+         * ==========================================================
+         * LIQUID OS v5.x OVERLAY
+         * - Everything from gemini_v3 preserved
+         * - New: softer design, dynamic spotlight, particle layer
+         * - New: command palette (Ctrl+K)
+         * - New: drag & drop ordering (Ctrl+Shift+L to lock)
+         * - New: settings modal with persistent theme
+         * - New: many new cards: Kanban, Markdown, Net, QR, TimeKit, LabPad, QuickTools
+         * ==========================================================
+         */
+
+        /* ----------------------------
+           STATE (old + extended)
+           ---------------------------- */
+        const state = {
+            accent: '#00f2ff',
+            history: [],
+            timerId: null,
+            timerTime: 25 * 60,
+            audioCtx: null,
+            analyser: null,
+            recognition: null,
+
+            // v5
+            metronomeId: null,
+            dragEnabled: true,
+            tiltEnabled: true,
+
+            // stopwatch
+            swId: null,
+            swStartTs: 0,
+            swElapsed: 0,
+            swLaps: [],
+
+            // command palette
+            cmdIndex: 0,
+
+            // settings
+            glassBlur: 30,
+            glassSat: 140,
+            noise: 0.05,
+            spot: 0.22,
+        };
+
+        /* ---------------------------------------------------------
+           CURSOR SPOTLIGHT (soft dynamic background)
+           --------------------------------------------------------- */
+        window.addEventListener('pointermove', (e) => {
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+            document.documentElement.style.setProperty('--mx', x.toFixed(2) + '%');
+            document.documentElement.style.setProperty('--my', y.toFixed(2) + '%');
+        });
+
+        /* ---------------------------------------------------------
+           1) DYNAMIC BACKGROUND BLOBS (preserved + upgraded)
+           --------------------------------------------------------- */
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let blobs = [];
+
+        function resizeCanvas(){
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Blob {
+            constructor() {
+                this.baseR = Math.random() * 160 + 90;
+                this.r = this.baseR;
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 1.45;
+                this.vy = (Math.random() - 0.5) * 1.45;
+                this.phase = Math.random() * Math.PI * 2;
+                this.color = Math.random() > 0.5 ? '#00f2ff' : '#bc13fe';
+            }
+            update(t, attract) {
+                // gentle breathing radius
+                this.r = this.baseR + Math.sin(t * 0.0012 + this.phase) * 24;
+
+                // velocity + boundary
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < -this.r || this.x > canvas.width + this.r) this.vx *= -1;
+                if (this.y < -this.r || this.y > canvas.height + this.r) this.vy *= -1;
+
+                // mild attraction to cursor (adds life)
+                if (attract) {
+                    const dx = attract.x - this.x;
+                    const dy = attract.y - this.y;
+                    const d = Math.sqrt(dx*dx + dy*dy) || 1;
+                    const k = Math.min(0.00055, 1 / (d * 420));
+                    this.vx += dx * k;
+                    this.vy += dy * k;
+                    // clamp
+                    this.vx = Math.max(-2.2, Math.min(2.2, this.vx));
+                    this.vy = Math.max(-2.2, Math.min(2.2, this.vy));
+                }
+            }
+            draw() {
+                const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r);
+                g.addColorStop(0, this.color);
+                g.addColorStop(0.55, this.color + '80');
+                g.addColorStop(1, 'transparent');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initBlobs() {
+            blobs = [];
+            for(let i=0; i<14; i++) blobs.push(new Blob());
+        }
+
+        const pointer = {x: window.innerWidth/2, y: window.innerHeight/2};
+        window.addEventListener('pointermove', (e)=>{ pointer.x = e.clientX; pointer.y = e.clientY; });
+
+        function animateBlobs(t=0) {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'screen';
+            blobs.forEach(b => { b.update(t, pointer); b.draw(); });
+            requestAnimationFrame(animateBlobs);
+        }
+        initBlobs();
+        animateBlobs();
+
+        /* ---------------------------------------------------------
+           2) PARTICLE LAYER (new)
+           --------------------------------------------------------- */
+        const pCanvas = document.getElementById('particleCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeParticles(){
+            pCanvas.width = window.innerWidth;
+            pCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeParticles);
+        resizeParticles();
+
+        class Particle{
+            constructor(){
+                this.x = Math.random() * pCanvas.width;
+                this.y = Math.random() * pCanvas.height;
+                this.r = Math.random() * 1.8 + 0.6;
+                this.vx = (Math.random()-0.5) * 0.25;
+                this.vy = (Math.random()-0.5) * 0.25;
+                this.a = Math.random()*0.6 + 0.2;
+            }
+            step(){
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // wrap edges
+                if(this.x < -10) this.x = pCanvas.width + 10;
+                if(this.x > pCanvas.width + 10) this.x = -10;
+                if(this.y < -10) this.y = pCanvas.height + 10;
+                if(this.y > pCanvas.height + 10) this.y = -10;
+            }
+            draw(){
+                pCtx.beginPath();
+                pCtx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+                pCtx.fillStyle = `rgba(255,255,255,${this.a})`;
+                pCtx.fill();
+            }
+        }
+
+        function initParticles(){
+            particles = [];
+            const count = Math.min(140, Math.floor((window.innerWidth * window.innerHeight) / 18000));
+            for(let i=0;i<count;i++) particles.push(new Particle());
+        }
+
+        function animateParticles(){
+            pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+            pCtx.globalCompositeOperation = 'lighter';
+            particles.forEach(p => { p.step(); p.draw(); });
+
+            // light link lines near cursor
+            const maxDist = 120;
+            for(let i=0; i<particles.length; i++){
+                const a = particles[i];
+                const dx = a.x - pointer.x;
+                const dy = a.y - pointer.y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                if(d < maxDist){
+                    pCtx.beginPath();
+                    pCtx.moveTo(a.x, a.y);
+                    pCtx.lineTo(pointer.x, pointer.y);
+                    pCtx.strokeStyle = `rgba(0,242,255,${(1 - d/maxDist)*0.15})`;
+                    pCtx.lineWidth = 1;
+                    pCtx.stroke();
+                }
+            }
+
+            requestAnimationFrame(animateParticles);
+        }
+        initParticles();
+        animateParticles();
+
+        /* ---------------------------------------------------------
+           3) AUDIO SYSTEM & VISUALIZER (preserved)
+           --------------------------------------------------------- */
+        function initAudio(){
+            if(!state.audioCtx){
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                state.audioCtx = new AudioContext();
+                state.analyser = state.audioCtx.createAnalyser();
+                state.analyser.fftSize = 64;
+                visualize();
+            }
+        }
+
+        function playSound(type){
+            initAudio();
+            const osc = state.audioCtx.createOscillator();
+            const gain = state.audioCtx.createGain();
+
+            osc.connect(gain);
+            gain.connect(state.analyser);
+            state.analyser.connect(state.audioCtx.destination);
+
+            const now = state.audioCtx.currentTime;
+
+            if(type === 'click'){
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+                gain.gain.setValueAtTime(0.10, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'success'){
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(420, now);
+                osc.frequency.linearRampToValueAtTime(860, now + 0.20);
+                gain.gain.setValueAtTime(0.10, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.42);
+                osc.start(now); osc.stop(now + 0.42);
+            } else if (type === 'tick'){
+                return;
+            }
+        }
+
+        function visualize(){
+            const vCanvas = document.getElementById('vizCanvas');
+            const vCtx = vCanvas.getContext('2d');
+            const bufferLength = state.analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function drawViz(){
+                requestAnimationFrame(drawViz);
+                state.analyser.getByteFrequencyData(dataArray);
+                vCtx.clearRect(0,0,vCanvas.width,vCanvas.height);
+
+                const barWidth = (vCanvas.width / bufferLength) * 2.5;
+                let barX = 0;
+
+                for(let i=0; i<bufferLength; i++){
+                    const barHeight = dataArray[i] / 2;
+                    // keep original "neon-ish" look but still soft
+                    vCtx.fillStyle = `rgb(${barHeight + 100}, 60, 255)`;
+                    vCtx.fillRect(barX, vCanvas.height - barHeight, barWidth, barHeight);
+                    barX += barWidth + 1;
+                }
+            }
+            drawViz();
+        }
+
+                    function toggleDetails(id){
+            const el = document.getElementById(id);
+            if(el) el.open = !el.open;
+            }
+
+            function copyResultText(panelId){
+            const el = document.getElementById(panelId);
+            if(!el){ showToast('Нет блока результата', 'warn'); return; }
+            const text = el.innerText.replace(/\n{3,}/g, '\n\n').trim();
+            navigator.clipboard.writeText(text);
+            showToast('Скопировано', 'ok');
+            playSound('success');
+            }
+
+            function downloadCSV(filename, rows){
+            const csv = rows
+                .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
+                .join('\n');
+
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+            }
+
+            state.lastCredit = null;
+
+        /* ---------------------------------------------------------
+           4) VOICE CONTROL (preserved + more commands)
+           --------------------------------------------------------- */
+        function toggleVoice(){
+            const btn = document.getElementById('micBtn');
+
+            if(!('webkitSpeechRecognition' in window)){
+                showToast("Ваш браузер не поддерживает Speech API", "error");
+                return;
+            }
+
+            if(state.recognition){
+                state.recognition.stop();
+                state.recognition = null;
+                btn.classList.remove('mic-active');
+                showToast("Голосовой ввод выключен");
+                return;
+            }
+
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            state.recognition = new Recognition();
+            state.recognition.lang = 'ru-RU';
+            state.recognition.continuous = false;
+            state.recognition.interimResults = false;
+
+            state.recognition.onstart = () => {
+                btn.classList.add('mic-active');
+                //playSound('click');
+                showToast("Слушаю... (например: 'настройки', 'кредит', 'kanban', 'палитра')");
+            };
+
+            state.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                processVoiceCommand(transcript);
+            };
+
+            state.recognition.onend = () => {
+                btn.classList.remove('mic-active');
+                state.recognition = null;
+            };
+
+            state.recognition.start();
+        }
+
+        function processVoiceCommand(cmd){
+            showToast(`Распознано: "${cmd}"`);
+            if(cmd.includes('настройки')) openSettings();
+            else if(cmd.includes('палитр') || cmd.includes('команд')) openCmdPalette();
+            else if(cmd.includes('физик')) scrollToId('physics');
+            else if(cmd.includes('сумм') || cmd.includes('математ')) scrollToId('math');
+            else if(cmd.includes('конверт')) scrollToId('tools');
+            else if(cmd.includes('финанс') || cmd.includes('кредит')) scrollToId('finance');
+            else if(cmd.includes('фокус') || cmd.includes('таймер')) scrollToId('focus');
+            else if(cmd.includes('kanban') || cmd.includes('задач')) scrollToId('kanban');
+            else if(cmd.includes('markdown') || cmd.includes('маркдаун')) scrollToId('markdown');
+            else if(cmd.includes('qr')) scrollToId('qr');
+            else if(cmd.includes('погода') || cmd.includes('валют')) scrollToId('net');
+            else if(cmd.includes('очистить')){
+                document.querySelectorAll('input').forEach(i => { if(i.type !== 'color' && i.type !== 'range') i.value = '' });
+                showToast("Инпуты очищены");
+            }
+            else if(cmd.includes('старт')) startTimer();
+            else if(cmd.includes('стоп')) resetTimer();
+            else showToast("Команда не найдена", "error");
+        }
+
+        /* ---------------------------------------------------------
+           5) ZEN MODE (preserved)
+           --------------------------------------------------------- */
+        function toggleZen(btn){
+            const card = btn.closest('.card');
+            const overlay = document.getElementById('zenOverlay');
+
+            if(card.classList.contains('zen-active')){
+                exitZenMode();
+            } else {
+                document.querySelectorAll('.zen-active').forEach(c => c.classList.remove('zen-active'));
+                card.classList.add('zen-active');
+                overlay.classList.add('active');
+                playSound('click');
+            }
+        }
+        function exitZenMode(){
+            document.querySelectorAll('.zen-active').forEach(c => c.classList.remove('zen-active'));
+            document.getElementById('zenOverlay').classList.remove('active');
+        }
+
+        /* ---------------------------------------------------------
+           6) OLD WIDGET LOGIC (PRESERVED)
+           --------------------------------------------------------- */
+
+        // Converter (preserved)
+        const units = {
+            dist: { 'm': 1, 'km': 1000, 'cm': 0.01, 'ft': 0.3048, 'mile': 1609.34 },
+            weight: { 'kg': 1, 'g': 0.001, 'lb': 0.453592, 'oz': 0.0283495 },
+            data: { 'MB': 1, 'GB': 1024, 'KB': 1/1024, 'TB': 1024*1024 }
+        };
+
+        function updateConvUnits(){
+            const type = document.getElementById('convType').value;
+            const u = Object.keys(units[type]);
+            const s1 = document.getElementById('convUnitFrom');
+            const s2 = document.getElementById('convUnitTo');
+            s1.innerHTML = s2.innerHTML = '';
+            u.forEach(k => { s1.add(new Option(k,k)); s2.add(new Option(k,k)); });
+            runConv();
+        }
+
+        function runConv(){
+            const type = document.getElementById('convType').value;
+            const val = parseFloat(document.getElementById('convVal').value);
+            const from = document.getElementById('convUnitFrom').value;
+            const to = document.getElementById('convUnitTo').value;
+
+            if(isNaN(val)){ document.getElementById('convRes').value = ''; return; }
+
+            const base = val * units[type][from];
+            const result = base / units[type][to];
+            document.getElementById('convRes').value = parseFloat(result.toPrecision(6));
+        }
+
+        // Password Generator (preserved)
+        function genPassword(){
+            const len = parseInt(document.getElementById('pwdLen').value);
+            const useUpper = document.getElementById('pwdUpper').checked;
+            const useNum = document.getElementById('pwdNum').checked;
+            const useSym = document.getElementById('pwdSym').checked;
+
+            let charset = "abcdefghijklmnopqrstuvwxyz";
+            if(useUpper) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            if(useNum) charset += "0123456789";
+            if(useSym) charset += "!@#$%^&*()_+";
+
+            let ret = "";
+            for(let i=0; i<len; i++){
+                ret += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            document.getElementById('pwdOut').value = ret;
+            playSound('success');
+
+            navigator.clipboard.writeText(ret);
+            showToast("Пароль скопирован в буфер");
+        }
+
+        // Smart Notes (preserved)
+        const noteArea = document.getElementById('quickNote');
+        noteArea.value = localStorage.getItem('liq_note') || '';
+        noteArea.addEventListener('input', () => {
+            localStorage.setItem('liq_note', noteArea.value);
+            document.getElementById('noteStatus').innerText = 'Saved';
+            document.getElementById('noteStatus').style.color = 'var(--primary)';
+        });
+
+        // Physics (preserved)
+        function calcPhysics(){
+            const m = parseFloat(document.getElementById('mass').value);
+            const f = parseFloat(document.getElementById('forse').value);
+
+            const panel = document.getElementById('physPanel');
+            const main = document.getElementById('res-phys');
+            const meta = document.getElementById('physMeta');
+            const steps = document.getElementById('steps-physics-body');
+
+            if(!(m > 0) || !Number.isFinite(f)){
+                panel.dataset.status = 'error';
+                main.innerHTML = `Проверьте ввод: масса > 0, сила — число.`;
+                meta.textContent = '';
+                steps.innerHTML = '';
+                showToast('Ошибка данных', 'error');
+                return;
+            }
+
+            const a = f / m;
+
+            panel.dataset.status = 'ok';
+            main.innerHTML = `Ускорение: <span class="value">${a.toFixed(3)}</span> м/с²`;
+            meta.textContent = `F = ${f} Н, m = ${m} кг`;
+
+            steps.innerHTML = `
+                <div><b>Формула:</b> a = F / m</div>
+                <div><b>Подстановка:</b> a = ${f} / ${m}</div>
+                <div><b>Ответ:</b> a = ${a.toFixed(3)} м/с²</div>
+            `;
+
+            playSound('success');
+            historyPush('Физика', `a = ${a.toFixed(3)} м/с²`);
+            }
+
+            function resetPhysics(){
+            document.getElementById('mass').value = '';
+            document.getElementById('forse').value = '';
+            document.getElementById('physPanel').dataset.status = 'idle';
+            document.getElementById('res-phys').innerHTML = 'Ожидание данных...';
+            document.getElementById('physMeta').textContent = '';
+            document.getElementById('steps-physics-body').innerHTML = '';
+            }
+
+        // Sum (preserved)
+        function calcSum(){
+            const n = parseInt(document.getElementById('num').value, 10);
+
+            const panel = document.getElementById('sumPanel');
+            const main = document.getElementById('res-sum');
+            const meta = document.getElementById('sumMeta');
+            const steps = document.getElementById('steps-sum-body');
+
+            if(!(n > 0)){
+                panel.dataset.status = 'error';
+                main.innerHTML = 'Введите N > 0';
+                meta.textContent = '';
+                steps.innerHTML = '';
+                showToast('Ошибка данных', 'error');
+                return;
+            }
+
+            // Кол-во нечётных <= N: 1,3,5,... => k = ceil(N/2)
+            const k = Math.floor((n + 1) / 2);
+            const s = k * k;
+
+            panel.dataset.status = 'ok';
+            main.innerHTML = `Результат: <span class="value">${s}</span>`;
+            meta.textContent = `N = ${n}, нечётных чисел: ${k}`;
+
+            steps.innerHTML = `
+                <div><b>Идея:</b> сумма первых k нечётных чисел равна k².</div>
+                <div><b>k:</b> k = ⌈N/2⌉ = ⌈${n}/2⌉ = ${k}</div>
+                <div><b>Ответ:</b> S = k² = ${k}² = ${s}</div>
+            `;
+
+            playSound('success');
+            historyPush('Σ нечетных', `N=${n} → ${s}`);
+            }
+
+            function resetSum(){
+            document.getElementById('num').value = '';
+            document.getElementById('sumPanel').dataset.status = 'idle';
+            document.getElementById('res-sum').innerHTML = 'Ожидание данных...';
+            document.getElementById('sumMeta').textContent = '';
+            document.getElementById('steps-sum-body').innerHTML = '';
+            }
+
+        // GPA (preserved)
+        function calcGrade(){
+            const vals = [
+                parseFloat(document.getElementById('gr1').value),
+                parseFloat(document.getElementById('gr2').value),
+                parseFloat(document.getElementById('gr3').value),
+            ].filter(v => Number.isFinite(v));
+
+            const panel = document.getElementById('gpaPanel');
+            const main = document.getElementById('res-grade');
+            const meta = document.getElementById('gpaMeta');
+
+            if(vals.length === 0){
+                panel.dataset.status = 'error';
+                main.innerHTML = 'Введите хотя бы одну оценку';
+                meta.textContent = '';
+                showToast('Введите оценки', 'warn');
+                return;
+            }
+
+            const sum = vals.reduce((a,b)=>a+b, 0);
+            const avg = sum / vals.length;
+            const min = Math.min(...vals);
+            const max = Math.max(...vals);
+
+            panel.dataset.status = 'ok';
+            main.innerHTML = `Средний балл: <span class="value">${avg.toFixed(2)}</span>`;
+            meta.textContent = `кол-во: ${vals.length} • min: ${min} • max: ${max}`;
+
+            playSound('success');
+            historyPush('GPA', `avg=${avg.toFixed(2)}`);
+            }
+
+            function resetGpa(){
+            document.getElementById('gr1').value = '';
+            document.getElementById('gr2').value = '';
+            document.getElementById('gr3').value = '';
+            document.getElementById('gpaPanel').dataset.status = 'idle';
+            document.getElementById('res-grade').innerHTML = 'Введите оценки';
+            document.getElementById('gpaMeta').textContent = '';
+            }
+
+            function exportGpaCSV(){
+            const vals = [
+                document.getElementById('gr1').value,
+                document.getElementById('gr2').value,
+                document.getElementById('gr3').value,
+            ].filter(v => String(v).trim() !== '');
+
+            if(vals.length === 0){
+                showToast('Нет данных для экспорта', 'warn');
+                return;
+            }
+
+            const rows = [['grade'], ...vals.map(v => [v])];
+            downloadCSV('gpa.csv', rows);
+            playSound('success');
+            }
+
+        // Credit (preserved)
+        function calcCredit(){
+            const S = parseFloat(document.getElementById('loanAmount').value);
+            const N = parseInt(document.getElementById('loanTerm').value, 10);
+            const annual = parseFloat(document.getElementById('loanRate').value);
+
+            if(!(S > 0 && N > 0 && annual >= 0)){
+                showToast('Заполните все поля', 'error');
+                return;
+            }
+
+            const R = annual / 1200;
+            let pay;
+
+            if(R === 0){
+                pay = S / N;
+            }else{
+                pay = S * (R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1);
+            }
+
+            let balance = S;
+            let rows = "";
+            let totalInterest = 0;
+            let totalPrincipal = 0;
+
+            const schedule = [];
+
+            for(let i = 1; i <= N; i++){
+                const interest = balance * R;
+                let principal = pay - interest;
+
+                if(i === N){
+                principal = balance;
+                pay = principal + interest;
+                }
+
+                balance = Math.max(0, balance - principal);
+
+                totalInterest += interest;
+                totalPrincipal += principal;
+
+                schedule.push({
+                month: i,
+                payment: +pay.toFixed(2),
+                principal: +principal.toFixed(2),
+                interest: +interest.toFixed(2),
+                balance: +balance.toFixed(2),
+                });
+
+                rows += `
+                <tr>
+                    <td>${i}</td>
+                    <td>${pay.toFixed(2)}</td>
+                    <td>${principal.toFixed(2)}</td>
+                    <td>${interest.toFixed(2)}</td>
+                    <td>${balance.toFixed(2)}</td>
+                </tr>
+                `;
+            }
+
+            const totalPaid = totalInterest + totalPrincipal;
+
+            state.lastCredit = { S, N, annual, pay: +pay.toFixed(2), totalInterest: +totalInterest.toFixed(2), totalPaid: +totalPaid.toFixed(2), schedule };
+
+            const summary = `
+                <div style="font-size:14px;">
+                Ежемесячный платёж:
+                <b style="font-size:18px; color:var(--primary)">${pay.toFixed(2)} ₽</b>
+                <div class="mini" style="margin-top:6px;">
+                    Переплата: <b class="muted">${totalInterest.toFixed(2)} ₽</b><br>
+                    Итого выплачено: <b class="muted">${totalPaid.toFixed(2)} ₽</b>
+                </div>
+                </div>
+            `;
+
+            document.getElementById('creditSummary').innerHTML = summary;
+            document.getElementById('creditSummary').classList.remove('hidden');
+
+            document.getElementById('creditTable').innerHTML = `
+                <table class="credit-table">
+                <thead>
+                    <tr>
+                    <th>Мес</th>
+                    <th>Платёж</th>
+                    <th>Тело</th>
+                    <th>%</th>
+                    <th>Остаток</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                </table>
+            `;
+            document.getElementById('creditTable').classList.remove('hidden');
+
+            playSound('success');
+            historyPush('Кредит', `${pay.toFixed(2)} ₽/мес`);
+            }
+
+            function copyCreditSummary(){
+            const el = document.getElementById('creditSummary');
+            if(el.classList.contains('hidden')){ showToast('Сначала рассчитайте кредит', 'warn'); return; }
+            navigator.clipboard.writeText(el.innerText.trim());
+            showToast('Скопировано', 'ok');
+            playSound('success');
+            }
+
+            function exportCreditCSV(){
+            if(!state.lastCredit?.schedule?.length){
+                showToast('Нет графика для экспорта', 'warn');
+                return;
+            }
+            const rows = [
+                ['month','payment','principal','interest','balance'],
+                ...state.lastCredit.schedule.map(r => [r.month, r.payment, r.principal, r.interest, r.balance])
+            ];
+            downloadCSV('credit_schedule.csv', rows);
+            playSound('success');
+            }
+
+            function resetCredit(){
+            document.getElementById('loanAmount').value = '';
+            document.getElementById('loanTerm').value = '';
+            document.getElementById('loanRate').value = '';
+            document.getElementById('creditSummary').classList.add('hidden');
+            document.getElementById('creditTable').classList.add('hidden');
+            document.getElementById('creditSummary').innerHTML = '';
+            document.getElementById('creditTable').innerHTML = '';
+            state.lastCredit = null;
+            }
+
+        // Timer (preserved)
+        function startTimer(){
+            if(state.timerId) return;
+            initAudio();
+            state.timerId = setInterval(() => {
+                state.timerTime--;
+                const m = Math.floor(state.timerTime/60).toString().padStart(2,'0');
+                const s = (state.timerTime%60).toString().padStart(2,'0');
+                document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+                if(state.timerTime <= 0){
+                    showToast("Сессия завершена ✅");
+                    playSound('success');
+                    resetTimer();
+                }
+            }, 1000);
+            playSound('click');
+        }
+
+        function resetTimer(){
+            clearInterval(state.timerId);
+            state.timerId = null;
+            state.timerTime = 25 * 60;
+            document.getElementById('timerDisplay').innerText = "25:00";
+        }
+
+        /* ---------------------------------------------------------
+           7) NEW UTILS / TOAST / HISTORY
+           --------------------------------------------------------- */
+        function showToast(msg, type='info', sub=''){
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'toast';
+
+            let icon = 'info';
+            let border = 'rgba(0,242,255,0.55)';
+            if(type === 'error'){ icon='error'; border='rgba(255,90,120,0.55)'; }
+            if(type === 'ok'){ icon='check_circle'; border='rgba(53,255,154,0.55)'; }
+            if(type === 'warn'){ icon='warning'; border='rgba(255,213,74,0.55)'; }
+
+            t.style.borderLeft = `4px solid ${border}`;
+            t.innerHTML = `
+                <span class="material-symbols-outlined" style="margin-top:1px;">${icon}</span>
+                <div>
+                    <div class="t-msg">${escapeHtml(msg)}</div>
+                    ${sub ? `<div class="t-sub">${escapeHtml(sub)}</div>` : ``}
+                </div>
+            `;
+            c.appendChild(t);
+
+            playSound(type === 'error' ? 'click' : 'click');
+
+            setTimeout(()=> t.remove(), 3400);
+        }
+
+        function escapeHtml(s){
+            return String(s).replace(/[&<>"']/g, (m)=>({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+            })[m]);
+        }
+
+        function historyPush(title, value){
+            state.history.unshift({t: Date.now(), title, value});
+            state.history = state.history.slice(0, 40);
+            localStorage.setItem('liq_history', JSON.stringify(state.history));
+        }
+
+        function openHistory(){
+            const h = JSON.parse(localStorage.getItem('liq_history') || '[]');
+            if(!h.length){
+                showToast("История сессии пуста");
+                return;
+            }
+            const lines = h.slice(0, 10).map(x=>{
+                const dt = new Date(x.t);
+                const ts = dt.toLocaleString('ru-RU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
+                return `• ${ts} — ${x.title}: ${x.value}`;
+            }).join('\n');
+            showToast("Последние события:", "info", lines);
+        }
+
+        /* ---------------------------------------------------------
+           8) SETTINGS MODAL (new)
+           --------------------------------------------------------- */
+        function openSettings(){
+            document.getElementById('settingsModal').classList.add('active');
+            syncSettingsUI();
+        }
+        function closeSettings(){
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function syncSettingsUI(){
+            document.getElementById('accentPicker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()) || state.accent;
+            document.getElementById('accentHex').innerText = document.getElementById('accentPicker').value;
+
+            document.getElementById('blurSlider').value = state.glassBlur;
+            document.getElementById('blurVal').innerText = state.glassBlur;
+
+            document.getElementById('satSlider').value = state.glassSat;
+            document.getElementById('satVal').innerText = state.glassSat + '%';
+
+            document.getElementById('noiseSlider').value = state.noise;
+            document.getElementById('noiseVal').innerText = state.noise.toFixed(2);
+
+            document.getElementById('spotSlider').value = state.spot;
+            document.getElementById('spotVal').innerText = state.spot.toFixed(2);
+
+            document.getElementById('dragState').innerText = state.dragEnabled ? 'ON' : 'OFF';
+            document.getElementById('tiltState').innerText = state.tiltEnabled ? 'ON' : 'OFF';
+            document.getElementById('dragState').style.color = state.dragEnabled ? 'var(--ok)' : 'var(--bad)';
+            document.getElementById('tiltState').style.color = state.tiltEnabled ? 'var(--ok)' : 'var(--bad)';
+
+            document.getElementById('accentPicker').oninput = (e)=>{
+                document.getElementById('accentHex').innerText = e.target.value;
+            };
+            document.getElementById('blurSlider').oninput = (e)=>{
+                document.getElementById('blurVal').innerText = e.target.value;
+            };
+            document.getElementById('satSlider').oninput = (e)=>{
+                document.getElementById('satVal').innerText = e.target.value + '%';
+            };
+            document.getElementById('noiseSlider').oninput = (e)=>{
+                document.getElementById('noiseVal').innerText = parseFloat(e.target.value).toFixed(2);
+            };
+            document.getElementById('spotSlider').oninput = (e)=>{
+                document.getElementById('spotVal').innerText = parseFloat(e.target.value).toFixed(2);
+            };
+        }
+
+        function applySettingsFromUI(){
+            const accent = document.getElementById('accentPicker').value;
+            const blur = parseInt(document.getElementById('blurSlider').value);
+            const sat = parseInt(document.getElementById('satSlider').value);
+            const noise = parseFloat(document.getElementById('noiseSlider').value);
+            const spot = parseFloat(document.getElementById('spotSlider').value);
+
+            applyThemeSettings({accent, blur, sat, noise, spot});
+            showToast("Настройки применены ✅", "ok");
+        }
+
+        function applyThemeSettings({accent, blur, sat, noise, spot}){
+            if(accent){
+                state.accent = accent;
+                document.documentElement.style.setProperty('--primary', accent);
+                // accent glow based on primary with alpha
+                const glow = hexToRgba(accent, 0.34);
+                document.documentElement.style.setProperty('--accent-glow', glow);
+            }
+            if(Number.isFinite(blur)){
+                state.glassBlur = blur;
+                document.documentElement.style.setProperty('--glass-blur', blur + 'px');
+            }
+            if(Number.isFinite(sat)){
+                state.glassSat = sat;
+                document.documentElement.style.setProperty('--glass-sat', sat + '%');
+            }
+            if(Number.isFinite(noise)){
+                state.noise = noise;
+                document.documentElement.style.setProperty('--noise-opacity', String(noise));
+            }
+            if(Number.isFinite(spot)){
+                state.spot = spot;
+                document.documentElement.style.setProperty('--spot-alpha', String(spot));
+            }
+
+            localStorage.setItem('liq_settings', JSON.stringify({
+                accent: state.accent,
+                blur: state.glassBlur,
+                sat: state.glassSat,
+                noise: state.noise,
+                spot: state.spot,
+                tilt: state.tiltEnabled,
+                drag: state.dragEnabled,
+            }));
+        }
+
+        function resetSettings(){
+            localStorage.removeItem('liq_settings');
+            state.accent = '#00f2ff';
+            state.glassBlur = 30;
+            state.glassSat = 140;
+            state.noise = 0.05;
+            state.spot = 0.22;
+            state.tiltEnabled = true;
+            state.dragEnabled = true;
+            applyThemeSettings({accent: state.accent, blur: state.glassBlur, sat: state.glassSat, noise: state.noise, spot: state.spot});
+            setDragEnabled(true);
+            showToast("Сброс выполнен", "ok");
+            syncSettingsUI();
+        }
+
+        function rgbToHex(rgb){
+            // handles "rgb(r,g,b)" or already hex
+            if(!rgb) return null;
+            if(rgb.startsWith('#')) return rgb;
+            const m = rgb.match(/(\d+)\D+(\d+)\D+(\d+)/);
+            if(!m) return null;
+            const r = Number(m[1]).toString(16).padStart(2,'0');
+            const g = Number(m[2]).toString(16).padStart(2,'0');
+            const b = Number(m[3]).toString(16).padStart(2,'0');
+            return '#' + r + g + b;
+        }
+
+        function hexToRgba(hex, a){
+            const h = hex.replace('#','');
+            const r = parseInt(h.substring(0,2), 16);
+            const g = parseInt(h.substring(2,4), 16);
+            const b = parseInt(h.substring(4,6), 16);
+            return `rgba(${r},${g},${b},${a})`;
+        }
+
+        function toggleCardTilt(){
+            state.tiltEnabled = !state.tiltEnabled;
+            document.getElementById('tiltState').innerText = state.tiltEnabled ? 'ON' : 'OFF';
+            document.getElementById('tiltState').style.color = state.tiltEnabled ? 'var(--ok)' : 'var(--bad)';
+            applyThemeSettings({}); // just persist
+        }
+
+        /* ---------------------------------------------------------
+           9) COMMAND PALETTE (new) - Ctrl+K
+           --------------------------------------------------------- */
+        const commands = [];
+
+        function registerCommands(){
+            commands.length = 0;
+
+            // cards
+            document.querySelectorAll('.card').forEach(card=>{
+                const id = card.id || '';
+                const title = (card.querySelector('h2')?.innerText || id || 'Card').trim();
+                const tags = (card.dataset.tags || '').trim();
+                commands.push({
+                    type: 'card',
+                    title,
+                    tags,
+                    icon: card.querySelector('.material-symbols-outlined')?.innerText || 'apps',
+                    run: ()=> { closeCmdPalette(); scrollToId(id); flashCard(id); }
+                });
+            });
+
+            // actions
+            commands.push({ type:'action', title:'Открыть настройки', tags:'settings theme', icon:'settings', run: ()=>{ closeCmdPalette(); openSettings(); }});
+            commands.push({ type:'action', title:'Включить/выключить drag карточек', tags:'drag reorder', icon:'drag_indicator', run: ()=>{ toggleDrag(); closeCmdPalette(); }});
+            commands.push({ type:'action', title:'Скопировать ссылку на текущую карточку (Zen)', tags:'link zen', icon:'link', run: ()=>{ copyZenCardLink(); }});
+            commands.push({ type:'action', title:'Очистить все input поля', tags:'clear clean', icon:'delete_sweep', run: ()=>{ document.querySelectorAll('input').forEach(i => { if(i.type!=='color' && i.type!=='range') i.value=''; }); showToast('Готово'); closeCmdPalette(); }});
+        }
+
+        function openCmdPalette(){
+            registerCommands();
+            document.getElementById('cmdPalette').classList.add('active');
+            const inp = document.getElementById('cmdInput');
+            inp.value = '';
+            state.cmdIndex = 0;
+            renderCmdList();
+            setTimeout(()=> inp.focus(), 0);
+        }
+
+        function closeCmdPalette(){
+            document.getElementById('cmdPalette').classList.remove('active');
+        }
+
+        function renderCmdList(){
+            const q = document.getElementById('cmdInput').value.toLowerCase().trim();
+            const list = document.getElementById('cmdList');
+
+            const filtered = commands
+                .filter(c => !q || (c.title.toLowerCase().includes(q) || (c.tags||'').toLowerCase().includes(q)))
+                .slice(0, 14);
+
+            if(state.cmdIndex >= filtered.length) state.cmdIndex = 0;
+
+            list.innerHTML = '';
+            filtered.forEach((c, idx)=>{
+                const el = document.createElement('div');
+                el.className = 'cmd-item';
+                el.style.outline = idx === state.cmdIndex ? '2px solid rgba(0,242,255,0.35)' : 'none';
+                el.innerHTML = `
+                    <span class="material-symbols-outlined">${c.icon}</span>
+                    <div style="flex:1;">
+                        <div class="title">${escapeHtml(c.title)}</div>
+                        <div class="tags">${escapeHtml(c.tags || c.type)}</div>
+                    </div>
+                    <span class="badge">${c.type}</span>
+                `;
+                el.onclick = ()=> c.run();
+                list.appendChild(el);
+            });
+
+            if(!filtered.length){
+                list.innerHTML = `<div class="mini">Ничего не найдено</div>`;
+            }
+        }
+
+        document.getElementById('cmdInput').addEventListener('input', ()=> { state.cmdIndex = 0; renderCmdList(); });
+        document.addEventListener('keydown', (e)=>{
+            if(e.ctrlKey && e.key.toLowerCase() === 'k'){
+                e.preventDefault();
+                if(document.getElementById('cmdPalette').classList.contains('active')) closeCmdPalette();
+                else openCmdPalette();
+            }
+        });
+
+        document.addEventListener('keydown', (e)=>{
+            const active = document.getElementById('cmdPalette').classList.contains('active');
+            if(!active) return;
+
+            const q = document.getElementById('cmdInput').value.toLowerCase().trim();
+            const filtered = commands
+                .filter(c => !q || (c.title.toLowerCase().includes(q) || (c.tags||'').toLowerCase().includes(q)))
+                .slice(0, 14);
+
+            if(e.key === 'ArrowDown'){
+                e.preventDefault();
+                state.cmdIndex = (state.cmdIndex + 1) % Math.max(1, filtered.length);
+                renderCmdList();
+            }
+            if(e.key === 'ArrowUp'){
+                e.preventDefault();
+                state.cmdIndex = (state.cmdIndex - 1 + Math.max(1, filtered.length)) % Math.max(1, filtered.length);
+                renderCmdList();
+            }
+            if(e.key === 'Enter'){
+                e.preventDefault();
+                if(filtered[state.cmdIndex]) filtered[state.cmdIndex].run();
+            }
+        });
+
+        /* ---------------------------------------------------------
+           10) SEARCH (preserved)
+           --------------------------------------------------------- */
+        document.getElementById('cardSearch').addEventListener('input', (e)=>{
+            const v = e.target.value.toLowerCase();
+            document.querySelectorAll('.card').forEach(c=>{
+                const txt = c.innerText.toLowerCase();
+                const tags = (c.dataset.tags||'').toLowerCase();
+                c.style.display = (txt.includes(v) || tags.includes(v)) ? 'block' : 'none';
+            });
+        });
+
+        /* ---------------------------------------------------------
+           11) NEW: CARD TILT + GLARE FOLLOW (soft)
+           --------------------------------------------------------- */
+        function attachCardTilt(){
+            document.querySelectorAll('.card').forEach(card=>{
+                card.addEventListener('mousemove', (e)=>{
+                    if(!state.tiltEnabled) return;
+                    if(card.classList.contains('zen-active')) return;
+
+                    const r = card.getBoundingClientRect();
+                    const px = (e.clientX - r.left) / r.width;
+                    const py = (e.clientY - r.top) / r.height;
+
+                    const rotY = (px - 0.5) * 10;
+                    const rotX = (0.5 - py) * 10;
+
+                    card.style.transform = `translateY(-10px) scale(1.02) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+                    const glare = card.querySelector('.glare');
+                    if(glare){
+                        const gx = (px*100).toFixed(1);
+                        const gy = (py*100).toFixed(1);
+                        glare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,0.18), transparent 50%)`;
+                    }
+                });
+
+                card.addEventListener('mouseleave', ()=>{
+                    card.style.transform = '';
+                    const glare = card.querySelector('.glare');
+                    if(glare){
+                        glare.style.background = `radial-gradient(circle at 50% 30%, rgba(255,255,255,0.14), transparent 46%)`;
+                    }
+                });
+            });
+        }
+
+        /* ---------------------------------------------------------
+           12) NEW: DRAG & DROP ORDERING (3rd new feature)
+           --------------------------------------------------------- */
+        function setDragEnabled(v){
+            state.dragEnabled = v;
+            document.querySelectorAll('.card').forEach(c=> c.setAttribute('draggable', String(!!v)));
+            localStorage.setItem('liq_drag', JSON.stringify(!!v));
+            const el = document.getElementById('dragState');
+            if(el){
+                el.innerText = state.dragEnabled ? 'ON' : 'OFF';
+                el.style.color = state.dragEnabled ? 'var(--ok)' : 'var(--bad)';
+            }
+        }
+
+        function toggleDrag(){
+            setDragEnabled(!state.dragEnabled);
+            showToast(`Drag & Drop: ${state.dragEnabled ? 'ON' : 'OFF'}`, state.dragEnabled ? 'ok' : 'warn');
+        }
+
+        document.addEventListener('keydown', (e)=>{
+            if(e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l'){
+                e.preventDefault();
+                toggleDrag();
+            }
+        });
+
+        let dragSrc = null;
+
+        function initDragOrdering(){
+            const container = document.getElementById('cardContainer');
+
+            container.addEventListener('dragstart', (e)=>{
+                if(!state.dragEnabled) return e.preventDefault();
+                const card = e.target.closest('.card');
+                if(!card) return;
+                dragSrc = card;
+                card.classList.add('drag-ghost');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            container.addEventListener('dragend', (e)=>{
+                const card = e.target.closest('.card');
+                if(card) card.classList.remove('drag-ghost');
+                dragSrc = null;
+                saveCardOrder();
+            });
+
+            container.addEventListener('dragover', (e)=>{
+                if(!state.dragEnabled) return;
+                e.preventDefault();
+                const target = e.target.closest('.card');
+                if(!target || !dragSrc || target === dragSrc) return;
+
+                const rect = target.getBoundingClientRect();
+                const after = (e.clientY - rect.top) > rect.height / 2;
+                if(after){
+                    target.after(dragSrc);
+                } else {
+                    target.before(dragSrc);
+                }
+            });
+        }
+
+        function saveCardOrder(){
+            const order = [...document.querySelectorAll('.card')].map(c => c.id || '');
+            localStorage.setItem('liq_card_order', JSON.stringify(order));
+        }
+
+        function loadCardOrder(){
+            const order = JSON.parse(localStorage.getItem('liq_card_order') || '[]');
+            if(!order.length) return;
+
+            const container = document.getElementById('cardContainer');
+            const map = new Map([...container.querySelectorAll('.card')].map(c => [c.id, c]));
+
+            order.forEach(id=>{
+                const el = map.get(id);
+                if(el) container.appendChild(el);
+            });
+        }
+
+        function flashCard(id){
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.style.outline = '2px solid rgba(0,242,255,0.35)';
+            el.style.outlineOffset = '6px';
+            setTimeout(()=>{ el.style.outline = 'none'; el.style.outlineOffset='0px'; }, 900);
+        }
+
+        function copyCardLink(id){
+            const url = location.href.split('#')[0] + '#' + id;
+            navigator.clipboard.writeText(url);
+            showToast("Ссылка на карточку скопирована", "ok", url);
+        }
+
+        function copyZenCardLink(){
+            const zen = document.querySelector('.card.zen-active');
+            if(!zen || !zen.id){
+                showToast("Нет активной Zen-карточки", "warn");
+                return;
+            }
+            copyCardLink(zen.id);
+        }
+
+        /* ---------------------------------------------------------
+           13) NEW: QUICK TOOLS
+           --------------------------------------------------------- */
+        function calcPercent(mode){
+            const base = parseFloat(document.getElementById('pctBase').value);
+            const rate = parseFloat(document.getElementById('pctRate').value);
+            if(!Number.isFinite(base) || !Number.isFinite(rate)){
+                showToast("Введите базу и процент", "error");
+                return;
+            }
+            const pct = base * (rate/100);
+            let out = '';
+            if(mode === '+') out = `${base} + ${rate}% = ${(base + pct).toFixed(4)}`;
+            if(mode === '-') out = `${base} - ${rate}% = ${(base - pct).toFixed(4)}`;
+            if(mode === 'only') out = `${rate}% от ${base} = ${pct.toFixed(4)}`;
+            document.getElementById('pctOut').innerHTML = `<b class="result-val">${out}</b>`;
+            playSound('success');
+            historyPush('Проценты', out);
+        }
+
+        function runTextStats(){
+            const t = document.getElementById('textStatsIn').value || '';
+            const chars = t.length;
+            const charsNoSpaces = t.replace(/\s/g,'').length;
+            const words = (t.trim().match(/\S+/g) || []).length;
+            const lines = (t.match(/\n/g) || []).length + 1;
+            const mins = words ? Math.max(1, Math.round(words/160)) : 0;
+
+            const top = topWords(t, 6);
+            const topStr = top.length ? top.map(x=> `${x.w} (${x.n})`).join(', ') : '—';
+
+            document.getElementById('textStatsOut').innerHTML = `
+                <div>Символов: <b class="result-val">${chars}</b></div>
+                <div>Без пробелов: <b class="result-val">${charsNoSpaces}</b></div>
+                <div>Слов: <b class="result-val">${words}</b></div>
+                <div>Строк: <b class="result-val">${lines}</b></div>
+                <div>Время чтения: <b class="result-val">~${mins} мин</b></div>
+                <div>Топ-слова: <b class="result-val">${escapeHtml(topStr)}</b></div>
+            `;
+            playSound('success');
+        }
+
+        function topWords(text, k){
+            const map = new Map();
+            const cleaned = text
+                .toLowerCase()
+                .replace(/[^\p{L}\p{N}\s-]/gu,' ')
+                .split(/\s+/)
+                .filter(x=>x.length>=4);
+
+            cleaned.forEach(w => map.set(w, (map.get(w)||0)+1));
+            return [...map.entries()]
+                .sort((a,b)=>b[1]-a[1])
+                .slice(0,k)
+                .map(([w,n])=>({w,n}));
+        }
+
+        function copyTextStats(){
+            const out = document.getElementById('textStatsOut').innerText.trim();
+            if(!out){ showToast("Сначала посчитайте статистику", "warn"); return; }
+            navigator.clipboard.writeText(out);
+            showToast("Скопировано", "ok");
+        }
+
+        function clearQuickTools(){
+            document.getElementById('pctBase').value = '';
+            document.getElementById('pctRate').value = '';
+            document.getElementById('pctOut').innerText = 'Ожидание данных...';
+            document.getElementById('textStatsIn').value = '';
+            document.getElementById('textStatsOut').innerHTML = '';
+            showToast("Очистка выполнена");
+        }
+
+        /* ---------------------------------------------------------
+           14) NEW: MARKDOWN STUDIO (local parser)
+           --------------------------------------------------------- */
+        function mdToHtml(md){
+            // Minimal markdown parser (headings, bold/italic, inline code, code blocks, lists, links)
+            let s = md || '';
+
+            // Escape HTML first
+            s = s.replace(/[&<>]/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+
+            // code blocks ```lang ... ```
+            s = s.replace(/```(\w+)?\n([\s\S]*?)```/g, (m, lang, code)=>{
+                const cls = lang ? `language-${lang}` : '';
+                return `<pre><code class="${cls}">${code.replace(/</g,'&lt;')}</code></pre>`;
+            });
+
+            // headings
+            s = s.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+            s = s.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+            s = s.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+
+            // bold / italic
+            s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            s = s.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+            // inline code
+            s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // links [text](url)
+            s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+            // unordered lists
+            s = s.replace(/^\s*-\s+(.*)$/gm, '<li>$1</li>');
+            s = s.replace(/(<li>.*<\/li>\n?)+/g, (m)=> `<ul>${m}</ul>`);
+
+            // paragraphs (very light)
+            s = s.split(/\n{2,}/).map(block=>{
+                if(block.trim().startsWith('<h') || block.trim().startsWith('<ul') || block.trim().startsWith('<pre')) return block;
+                return `<p>${block.replace(/\n/g,'<br>')}</p>`;
+            }).join('\n');
+
+            return s;
+        }
+
+        const mdInput = document.getElementById('mdInput');
+        const mdPreview = document.getElementById('mdPreview');
+
+        function refreshMarkdownPreview(){
+            mdPreview.innerHTML = mdToHtml(mdInput.value);
+        }
+
+        mdInput.addEventListener('input', refreshMarkdownPreview);
+
+        function saveMarkdown(){
+            localStorage.setItem('liq_md', mdInput.value);
+            showToast("Markdown сохранён", "ok");
+        }
+
+        function loadMarkdown(){
+            mdInput.value = localStorage.getItem('liq_md') || '';
+            refreshMarkdownPreview();
+            showToast("Markdown загружен", "ok");
+        }
+
+        function copyMarkdownHtml(){
+            const html = mdPreview.innerHTML;
+            navigator.clipboard.writeText(html);
+            showToast("HTML скопирован", "ok");
+        }
+
+        /* ---------------------------------------------------------
+           15) NEW: KANBAN
+           --------------------------------------------------------- */
+        const kStateKey = 'liq_kanban_v1';
+
+        function loadKanban(){
+            const raw = localStorage.getItem(kStateKey);
+            if(!raw){
+                const init = { todo: [], doing: [], done: [] };
+                localStorage.setItem(kStateKey, JSON.stringify(init));
+            }
+            renderKanban();
+        }
+
+        function saveKanban(obj){
+            localStorage.setItem(kStateKey, JSON.stringify(obj));
+        }
+
+        function getKanban(){
+            return JSON.parse(localStorage.getItem(kStateKey) || '{"todo":[],"doing":[],"done":[]}');
+        }
+
+        function addKanbanItem(){
+            const text = (document.getElementById('kanbanText').value || '').trim();
+            if(!text){ showToast("Введите текст задачи", "warn"); return; }
+            const db = getKanban();
+            db.todo.unshift({ id: 'k_' + Math.random().toString(16).slice(2), text, ts: Date.now() });
+            saveKanban(db);
+            document.getElementById('kanbanText').value = '';
+            renderKanban();
+            playSound('success');
+        }
+
+        function renderKanban(){
+            const db = getKanban();
+            const todo = document.getElementById('kTodo');
+            const doing = document.getElementById('kDoing');
+            const done = document.getElementById('kDone');
+
+            todo.innerHTML = '';
+            doing.innerHTML = '';
+            done.innerHTML = '';
+
+            const mk = (item)=>{
+                const el = document.createElement('div');
+                el.className = 'kitem';
+                el.draggable = true;
+                el.dataset.kid = item.id;
+                el.ondragstart = (e)=> { e.dataTransfer.setData('text/plain', item.id); };
+                const dt = new Date(item.ts);
+                el.innerHTML = `${escapeHtml(item.text)} <small>${dt.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small>`;
+                el.ondblclick = ()=> { editKanbanItem(item.id); };
+                return el;
+            };
+
+            db.todo.forEach(i=> todo.appendChild(mk(i)));
+            db.doing.forEach(i=> doing.appendChild(mk(i)));
+            db.done.forEach(i=> done.appendChild(mk(i)));
+
+            document.getElementById('kTodoN').innerText = db.todo.length;
+            document.getElementById('kDoingN').innerText = db.doing.length;
+            document.getElementById('kDoneN').innerText = db.done.length;
+        }
+
+        function kAllow(e){ e.preventDefault(); }
+
+        function kDrop(e){
+            e.preventDefault();
+            const kid = e.dataTransfer.getData('text/plain');
+            const col = e.currentTarget.dataset.col;
+            const db = getKanban();
+
+            const all = [...db.todo, ...db.doing, ...db.done];
+            const item = all.find(x=>x.id===kid);
+            if(!item) return;
+
+            db.todo = db.todo.filter(x=>x.id!==kid);
+            db.doing = db.doing.filter(x=>x.id!==kid);
+            db.done = db.done.filter(x=>x.id!==kid);
+
+            db[col].unshift(item);
+
+            saveKanban(db);
+            renderKanban();
+            playSound('click');
+        }
+
+        function editKanbanItem(id){
+            const db = getKanban();
+            const all = [...db.todo, ...db.doing, ...db.done];
+            const item = all.find(x=>x.id===id);
+            if(!item) return;
+
+            const next = prompt("Редактировать задачу:", item.text);
+            if(next === null) return;
+
+            item.text = next.trim() || item.text;
+            saveKanban(db);
+            renderKanban();
+            showToast("Обновлено", "ok");
+        }
+
+        function resetKanban(){
+            if(!confirm('Сбросить Kanban?')) return;
+            localStorage.setItem(kStateKey, JSON.stringify({todo:[], doing:[], done:[]}));
+            renderKanban();
+            showToast("Kanban очищен", "ok");
+        }
+
+        /* ---------------------------------------------------------
+           16) NEW: QR Generator
+           --------------------------------------------------------- */
+        function switchQRMode(){
+            const m = document.getElementById('qrMode').value;
+            document.getElementById('qrTextMode').classList.toggle('hidden', m !== 'text');
+            document.getElementById('qrWifiMode').classList.toggle('hidden', m !== 'wifi');
+        }
+
+        function buildWifiPayload(){
+            const ssid = (document.getElementById('wifiSsid').value || '').trim();
+            const pass = (document.getElementById('wifiPass').value || '').trim();
+            const type = document.getElementById('wifiType').value;
+
+            if(!ssid){ throw new Error('SSID пуст'); }
+            if(type !== 'nopass' && !pass){ throw new Error('Введите пароль Wi-Fi'); }
+            // WiFi QR format
+            return `WIFI:T:${type};S:${ssid};P:${pass};;`;
+        }
+
+        function renderQR(){
+            try{
+                const mode = document.getElementById('qrMode').value;
+                let payload = '';
+                if(mode === 'text'){
+                    payload = (document.getElementById('qrText').value || '').trim();
+                    if(!payload) throw new Error('Введите текст/ссылку');
+                } else {
+                    payload = buildWifiPayload();
+                }
+
+                const cnv = document.getElementById('qrCanvas');
+
+                if(window.QRious){
+                    const qr = new QRious({
+                        element: cnv,
+                        value: payload,
+                        size: 220,
+                        level: 'H',
+                        backgroundAlpha: 0,
+                        foreground: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#00f2ff'
+                    });
+                    showToast("QR готов ✅", "ok", payload.slice(0, 60) + (payload.length>60?'...':''));
+                    historyPush('QR', payload.slice(0, 40));
+                } else {
+                    // fallback: draw simple "placeholder"
+                    const g = cnv.getContext('2d');
+                    g.clearRect(0,0,cnv.width,cnv.height);
+                    g.fillStyle = 'rgba(255,255,255,0.08)';
+                    g.fillRect(0,0,cnv.width,cnv.height);
+                    g.fillStyle = 'rgba(255,255,255,0.85)';
+                    g.font = '14px Quicksand';
+                    g.fillText('QR lib not loaded', 40, 110);
+                    showToast("QR библиотека не загрузилась", "warn", "Проверь интернет / CDN");
+                }
+            } catch(err){
+                showToast(err.message || 'Ошибка QR', 'error');
+            }
+        }
+
+        function downloadQR(){
+            const cnv = document.getElementById('qrCanvas');
+            const a = document.createElement('a');
+            a.download = 'liquid_qr.png';
+            a.href = cnv.toDataURL('image/png');
+            a.click();
+            showToast("PNG скачан", "ok");
+        }
+
+        /* ---------------------------------------------------------
+           17) NEW: NET Widgets
+           --------------------------------------------------------- */
+        async function fetchWeather(){
+            const city = (document.getElementById('wCity').value || '').trim();
+            if(!city){ showToast("Введите город", "warn"); return; }
+
+            const out = document.getElementById('wOut');
+            out.innerText = 'Загрузка...';
+
+            try{
+                // Geocoding via Open-Meteo
+                const gUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru&format=json`;
+                const gRes = await fetch(gUrl);
+                const g = await gRes.json();
+                if(!g.results || !g.results.length) throw new Error('Город не найден');
+
+                const place = g.results[0];
+                const lat = place.latitude;
+                const lon = place.longitude;
+
+                const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,cloud_cover,wind_speed_10m&timezone=auto`;
+                const wRes = await fetch(wUrl);
+                const w = await wRes.json();
+
+                const c = w.current;
+                const msg = `
+                    <div><b>${escapeHtml(place.name)}</b>, ${escapeHtml(place.country || '')}</div>
+                    <div>Температура: <b class="result-val">${c.temperature_2m}°C</b> (ощущается ${c.apparent_temperature}°C)</div>
+                    <div>Осадки: <b class="result-val">${c.precipitation} мм</b> • Облака: ${c.cloud_cover}%</div>
+                    <div>Ветер: <b class="result-val">${c.wind_speed_10m} км/ч</b></div>
+                `;
+                out.innerHTML = msg;
+                playSound('success');
+                historyPush('Погода', `${place.name}: ${c.temperature_2m}°C`);
+            } catch(err){
+                out.innerText = '';
+                showToast("Ошибка погоды", "error", err.message || 'fetch failed');
+            }
+        }
+        const FX_ACCESS_KEY = "b50a8be371f29c8b9c4decedc99b7f47";
+
+        async function fetchFX(){
+  const amount = parseFloat(document.getElementById('fxAmount').value);
+  const from = document.getElementById('fxFrom').value;
+  const to = document.getElementById('fxTo').value;
+
+  if(!Number.isFinite(amount)){
+    showToast("Введите сумму", "warn");
+    return;
+  }
+
+  if(!FX_ACCESS_KEY){
+    showToast("FX: не задан access_key", "warn", "Вставь ключ в FX_ACCESS_KEY");
+    return;
+  }
+
+  const out = document.getElementById('fxOut');
+  out.innerText = 'Загрузка...';
+
+  try{
+    const url =
+      `https://api.exchangerate.host/convert` +
+      `?access_key=${encodeURIComponent(FX_ACCESS_KEY)}` +
+      `&from=${encodeURIComponent(from)}` +
+      `&to=${encodeURIComponent(to)}` +
+      `&amount=${encodeURIComponent(amount)}`;
+
+    const res = await fetch(url);
+
+    // важно: если прилетает HTML/ошибка — не ломаемся на .json()
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(`FX вернул не JSON (HTTP ${res.status})`); }
+
+    if(!res.ok){
+      throw new Error(data?.error?.info || data?.message || `HTTP ${res.status}`);
+    }
+
+    // success:false или result отсутствует
+    if(data?.success === false){
+      throw new Error(data?.error?.info || "FX: success=false");
+    }
+    if(data?.result == null){
+      throw new Error("FX: нет result");
+    }
+
+    const rate = Number(data.info?.quote ?? data.info?.rate ?? 0);
+
+    out.innerHTML = `
+      <div>${amount} ${from} → <b class="result-val">${Number(data.result).toFixed(4)} ${to}</b></div>
+      <div class="mini">rate: ${rate ? rate.toFixed(6) : '—'} • дата: ${escapeHtml(data.date || '')}</div>
+    `;
+
+    playSound('success');
+    historyPush('FX', `${amount} ${from} → ${Number(data.result).toFixed(4)} ${to}`);
+
+  } catch(err){
+    out.innerText = '';
+    showToast("Ошибка валют", "error", err.message || 'fetch failed');
+  }
+}
+
+        async function fetchCrypto(){
+            const coin = document.getElementById('cgCoin').value;
+            const cur = document.getElementById('cgCur').value;
+            const out = document.getElementById('cgOut');
+            out.innerText = 'Загрузка...';
+
+            try{
+                const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(coin)}&vs_currencies=${encodeURIComponent(cur)}&include_24hr_change=true`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if(!data || !data[coin] || data[coin][cur] == null) throw new Error('Нет данных');
+
+                const price = data[coin][cur];
+                const ch = data[coin][cur + '_24h_change'];
+                const sign = ch >= 0 ? '+' : '';
+                out.innerHTML = `
+                    <div>${coin} (${cur.toUpperCase()}): <b class="result-val">${price}</b></div>
+                    <div>24h: <b class="result-val">${sign}${ch.toFixed(2)}%</b></div>
+                `;
+                playSound('success');
+                historyPush('Crypto', `${coin}: ${price} ${cur}`);
+            } catch(err){
+                out.innerText = '';
+                showToast("Ошибка крипто", "error", err.message || 'fetch failed');
+            }
+        }
+
+        function refreshNetWidgets(){
+            // just "refresh" whatever currently filled
+            const city = (document.getElementById('wCity').value || '').trim();
+            if(city) fetchWeather();
+            const amt = (document.getElementById('fxAmount').value || '').trim();
+            if(amt) fetchFX();
+            fetchCrypto();
+            showToast("Обновление запущено", "ok");
+        }
+
+        /* ---------------------------------------------------------
+           18) NEW: TIMEKIT
+           --------------------------------------------------------- */
+        function fmtTime(tz){
+            const dt = new Date();
+            return dt.toLocaleString('ru-RU', {
+                timeZone: tz,
+                hour: '2-digit',
+                minute:'2-digit',
+                second:'2-digit',
+                day:'2-digit',
+                month:'2-digit'
+            });
+        }
+
+        function syncClocks(silent = false){
+            const a = document.getElementById('tz1').value;
+            const b = document.getElementById('tz2').value;
+            const out = document.getElementById('tzOut');
+
+            try{
+                out.innerHTML = `
+                <div><b>${escapeHtml(a)}</b>: <span class="result-val">${fmtTime(a)}</span></div>
+                <div><b>${escapeHtml(b)}</b>: <span class="result-val">${fmtTime(b)}</span></div>
+                `;
+                if(!silent) playSound('click');
+            } catch(err){
+                out.innerText = 'Ошибка timezone (возможны ограничения браузера)';
+                showToast("Timezone ошибка", "warn");
+            }
+        }
+
+        setInterval(() => syncClocks(true), 1000);
+
+        function swStart(){
+            if(state.swId) return;
+            state.swStartTs = performance.now();
+            state.swId = setInterval(()=>{
+                const now = performance.now();
+                const total = state.swElapsed + (now - state.swStartTs);
+                document.getElementById('swOut').innerText = msToStopwatch(total);
+            }, 80);
+            showToast("Stopwatch: start", "ok");
+        }
+
+        function swLap(){
+            const txt = document.getElementById('swOut').innerText;
+            state.swLaps.unshift(txt);
+            state.swLaps = state.swLaps.slice(0, 10);
+            renderLaps();
+            playSound('click');
+        }
+
+        function swReset(){
+            clearInterval(state.swId);
+            state.swId = null;
+            state.swElapsed = 0;
+            state.swStartTs = 0;
+            state.swLaps = [];
+            document.getElementById('swOut').innerText = '00:00.0';
+            renderLaps();
+            showToast("Stopwatch: reset", "warn");
+        }
+
+        function renderLaps(){
+            const el = document.getElementById('swLaps');
+            if(!state.swLaps.length){ el.innerHTML = ''; return; }
+            el.innerHTML = state.swLaps.map((x,i)=> `<div>Lap ${state.swLaps.length - i}: <b class="result-val">${x}</b></div>`).join('');
+        }
+
+        function msToStopwatch(ms){
+            const total = Math.max(0, ms);
+            const m = Math.floor(total/60000);
+            const s = Math.floor((total%60000)/1000);
+            const d = Math.floor((total%1000)/100);
+            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${d}`;
+        }
+
+        function calcSleep(){
+            const t = document.getElementById('sleepWake').value;
+            if(!t){ showToast("Введите время подъёма", "warn"); return; }
+
+            // goal: wake at time; compute bedtimes: (wake - 15min to fall asleep) - 90min*k
+            const [hh, mm] = t.split(':').map(Number);
+            const now = new Date();
+            const wake = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+            // if wake time is earlier than now, assume next day
+            if(wake.getTime() < now.getTime()) wake.setDate(wake.getDate() + 1);
+
+            const sleepOut = [];
+            for(let k=6; k>=3; k--){
+                const bed = new Date(wake.getTime() - (k*90 + 15) * 60 * 1000);
+                sleepOut.push(`${k} циклов → ${bed.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`);
+            }
+
+            document.getElementById('sleepOut').innerHTML =
+                `<div>Подъём: <b class="result-val">${wake.toLocaleString('ru-RU',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</b></div>` +
+                sleepOut.map(x=> `<div>${escapeHtml(x)}</div>`).join('');
+            playSound('success');
+        }
+
+        /* ---------------------------------------------------------
+           19) NEW: LAB PAD (mini table → CSV)
+           --------------------------------------------------------- */
+        function labInit(){
+            const raw = localStorage.getItem('liq_lab') || '';
+            let rows = [];
+            try{ rows = raw ? JSON.parse(raw) : []; }catch(e){ rows=[]; }
+            if(!rows.length){
+                rows = [{x:'',y:''},{x:'',y:''},{x:'',y:''}];
+                localStorage.setItem('liq_lab', JSON.stringify(rows));
+            }
+            renderLab(rows);
+        }
+
+        function labGet(){
+            try{ return JSON.parse(localStorage.getItem('liq_lab') || '[]'); }catch(e){ return []; }
+        }
+
+        function labSet(rows){
+            localStorage.setItem('liq_lab', JSON.stringify(rows));
+        }
+
+        function renderLab(rows){
+            const wrap = document.getElementById('labTable');
+            wrap.innerHTML = '';
+            rows.forEach((r, idx)=>{
+                const row = document.createElement('div');
+                row.className = 'row';
+                row.style.marginTop = '8px';
+                row.innerHTML = `
+                    <input value="${escapeHtml(r.x)}" placeholder="x" oninput="labEdit(${idx}, 'x', this.value)" />
+                    <input value="${escapeHtml(r.y)}" placeholder="y" oninput="labEdit(${idx}, 'y', this.value)" />
+                `;
+                wrap.appendChild(row);
+            });
+        }
+
+        function labEdit(i, key, val){
+            const rows = labGet();
+            if(!rows[i]) return;
+            rows[i][key] = val;
+            labSet(rows);
+        }
+
+        function labAddRow(){
+            const rows = labGet();
+            rows.push({x:'',y:''});
+            labSet(rows);
+            renderLab(rows);
+            showToast("Строка добавлена", "ok");
+        }
+
+        function labCompute(){
+            const rows = labGet();
+            const xs = rows.map(r=>parseFloat(r.x)).filter(Number.isFinite);
+            const ys = rows.map(r=>parseFloat(r.y)).filter(Number.isFinite);
+
+            if(xs.length < 2 || ys.length < 2){
+                showToast("Нужно минимум 2 числовых значения в x и y", "warn");
+                return;
+            }
+
+            const mean = (arr)=> arr.reduce((a,b)=>a+b,0)/arr.length;
+            const std = (arr)=>{
+                const m = mean(arr);
+                const v = arr.reduce((acc,x)=>acc + (x-m)*(x-m), 0)/(arr.length-1);
+                return Math.sqrt(v);
+            };
+
+            const mx = mean(xs), my = mean(ys);
+            const sx = std(xs), sy = std(ys);
+
+            document.getElementById('labOut').innerHTML = `
+                <div>n(x)=${xs.length}, ⟨x⟩=<b class="result-val">${mx.toFixed(6)}</b>, σx=<b class="result-val">${sx.toFixed(6)}</b></div>
+                <div>n(y)=${ys.length}, ⟨y⟩=<b class="result-val">${my.toFixed(6)}</b>, σy=<b class="result-val">${sy.toFixed(6)}</b></div>
+            `;
+            playSound('success');
+        }
+
+        function labExportCSV(){
+            const rows = labGet();
+            const csv = ['x,y', ...rows.map(r=>`${String(r.x).replace(',','.')},${String(r.y).replace(',','.')}`)].join('\n');
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'lab_data.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("CSV экспортирован", "ok");
+        }
+
+        /* ---------------------------------------------------------
+           20) Notes extras
+           --------------------------------------------------------- */
+        function exportNotes(){
+            const txt = document.getElementById('quickNote').value || '';
+            const blob = new Blob([txt], {type:'text/plain;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'notes.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Заметка выгружена", "ok");
+        }
+
+        function summarizeNoteLocal(){
+            const txt = (document.getElementById('quickNote').value || '').trim();
+            if(!txt){ showToast("Заметка пуста", "warn"); return; }
+
+            // very small local "summary": first sentences + key words
+            const sentences = txt.split(/(?<=[.!?])\s+/).filter(Boolean);
+            const head = sentences.slice(0,2).join(' ');
+            const top = topWords(txt, 6).map(x=>x.w).join(', ');
+
+            showToast("Mini-summary", "info", `${head.slice(0,180)}${head.length>180?'...':''}\nКлючевые: ${top || '—'}`);
+        }
+
+        /* ---------------------------------------------------------
+           21) Pomodoro extras
+           --------------------------------------------------------- */
+        function setPomodoroPreset(min){
+            if(state.timerId){
+                showToast("Сначала остановите таймер", "warn");
+                return;
+            }
+            state.timerTime = Math.max(1, Math.floor(min*60));
+            const m = String(Math.floor(state.timerTime/60)).padStart(2,'0');
+            const s = String(state.timerTime%60).padStart(2,'0');
+            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+            showToast(`Preset: ${min} минут`, "ok");
+        }
+
+        function toggleMetronome(){
+            return;
+        }
+
+        /* ---------------------------------------------------------
+           22) Modals / Esc handling
+           --------------------------------------------------------- */
+        document.addEventListener('keydown', (e)=>{
+            if(e.key === 'Escape'){
+                // close modals
+                document.getElementById('cmdPalette').classList.remove('active');
+                document.getElementById('settingsModal').classList.remove('active');
+                exitZenMode();
+            }
+        });
+
+        /* ---------------------------------------------------------
+           23) Export / Import state
+           --------------------------------------------------------- */
+        function exportState(){
+            const blob = new Blob([JSON.stringify({
+                settings: JSON.parse(localStorage.getItem('liq_settings') || '{}'),
+                order: JSON.parse(localStorage.getItem('liq_card_order') || '[]'),
+                note: localStorage.getItem('liq_note') || '',
+                md: localStorage.getItem('liq_md') || '',
+                kanban: JSON.parse(localStorage.getItem(kStateKey) || '{"todo":[],"doing":[],"done":[]}'),
+                lab: JSON.parse(localStorage.getItem('liq_lab') || '[]')
+            }, null, 2)], {type:'application/json;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'liquid_os_state.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Export готов", "ok");
+        }
+
+        function importState(){
+            const inp = document.createElement('input');
+            inp.type = 'file';
+            inp.accept = 'application/json';
+            inp.onchange = async ()=> {
+                const file = inp.files[0];
+                if(!file) return;
+                try{
+                    const txt = await file.text();
+                    const obj = JSON.parse(txt);
+
+                    if(obj.settings) localStorage.setItem('liq_settings', JSON.stringify(obj.settings));
+                    if(obj.order) localStorage.setItem('liq_card_order', JSON.stringify(obj.order));
+                    if(typeof obj.note === 'string') localStorage.setItem('liq_note', obj.note);
+                    if(typeof obj.md === 'string') localStorage.setItem('liq_md', obj.md);
+                    if(obj.kanban) localStorage.setItem(kStateKey, JSON.stringify(obj.kanban));
+                    if(obj.lab) localStorage.setItem('liq_lab', JSON.stringify(obj.lab));
+
+                    showToast("Import выполнен ✅", "ok");
+                    location.reload();
+                } catch(err){
+                    showToast("Ошибка Import", "error", err.message || '');
+                }
+            };
+            inp.click();
+        }
+
+        /* ---------------------------------------------------------
+           24) Scroll helper preserved
+           --------------------------------------------------------- */
+        function scrollToId(id){
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+
+        /* ---------------------------------------------------------
+           25) Init
+           --------------------------------------------------------- */
+        function init(){
+            // restore settings
+            const s = JSON.parse(localStorage.getItem('liq_settings') || '{}');
+            if(s && Object.keys(s).length){
+                state.accent = s.accent || state.accent;
+                state.glassBlur = Number.isFinite(s.blur) ? s.blur : state.glassBlur;
+                state.glassSat = Number.isFinite(s.sat) ? s.sat : state.glassSat;
+                state.noise = Number.isFinite(s.noise) ? s.noise : state.noise;
+                state.spot = Number.isFinite(s.spot) ? s.spot : state.spot;
+                state.tiltEnabled = (s.tilt !== undefined) ? !!s.tilt : state.tiltEnabled;
+                state.dragEnabled = (s.drag !== undefined) ? !!s.drag : state.dragEnabled;
+
+                applyThemeSettings({accent: state.accent, blur: state.glassBlur, sat: state.glassSat, noise: state.noise, spot: state.spot});
+            } else {
+                applyThemeSettings({accent: state.accent, blur: state.glassBlur, sat: state.glassSat, noise: state.noise, spot: state.spot});
+            }
+
+            // restore drag flag (old key)
+            const drag = JSON.parse(localStorage.getItem('liq_drag') || 'null');
+            if(drag !== null) state.dragEnabled = !!drag;
+            setDragEnabled(state.dragEnabled);
+
+            // restore order
+            loadCardOrder();
+
+            // attach tilt/glare
+            attachCardTilt();
+
+            // init drag ordering
+            initDragOrdering();
+
+            // init converter
+            updateConvUnits();
+
+            // init kanban + markdown + lab
+            loadKanban();
+            loadMarkdown();
+            labInit();
+            syncClocks();
+
+            // auto QR render placeholder to show it works quickly
+            setTimeout(()=>{ try{ renderQR(); }catch(e){} }, 350);
+
+            // deep link highlight
+            if(location.hash){
+                const id = location.hash.replace('#','');
+                setTimeout(()=> flashCard(id), 500);
+            }
+
+            showToast("Liquid OS v5.x overlay loaded", "ok", "Ctrl+K → палитра команд");
+        }
+        
+
+        init();
+
+    </script>
+</body>
+</html>
