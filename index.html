@@ -316,6 +316,20 @@
             padding:0 6px;
         }
 
+        .search-bar > .material-symbols-outlined{
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        line-height: 1;
+        font-size: 20px; /* как у mic/keyboard */
+        }
+
+        /* (опционально) если на iOS всё равно чуть выше/ниже — подкрути на 1px */
+        @supports (-webkit-touch-callout: none){
+        .search-bar > .material-symbols-outlined{ transform: translateY(1px); }
+        }
+
         /* --- 6. SIDE NAV --- */
         .side-nav{
             position:fixed;
@@ -943,6 +957,34 @@
                 height: 38px;
             }
 
+            /* Fix: ровное центрирование Material Symbols в круглых кнопках и в строке поиска */
+            .icon-btn,
+            .search-bar > .material-symbols-outlined{
+            box-sizing: border-box;
+            }
+
+            .icon-btn.search-toggle{
+                padding-left: 10px;   /* подстрой 1–3px */
+                padding-right: 0px;
+                }
+
+            /* Кнопки-иконки справа (в т.ч. мобильная лупа) */
+            .icon-btn.material-symbols-outlined{
+            line-height: 1;        /* убирает “воздух” шрифта */
+            padding-top: 1px;      /* микро-сдвиг вниз (подгони 0–2px) */
+            text-align: center;
+            }
+
+            /* Левая лупа внутри search-bar */
+            .search-bar > .material-symbols-outlined{
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            line-height: 1;
+            padding-top: 10px;      /* микро-сдвиг вниз (подгони 0–2px) */
+            }
+
             .search-container{
                 order: 3;
                 flex: 1 1 100%;
@@ -1137,6 +1179,10 @@
                 /* поиск скрыт, кнопка видна */
                 #hudSearch{ display:none; }
                 .search-toggle{ display:inline-flex; }
+
+                .icon-btn.search-toggle{
+                    text-indent: 6px; /* подстрой: 1–3px */
+                }
 
                 body.search-open .search-backdrop{
                     opacity: 1;
