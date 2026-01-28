@@ -15,14 +15,6 @@
     <script defer src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
     <style>
-        /* ==========================================================
-           LIQUID OS :: ULTRA SOFT GLASS EDITION (v5.x OVERLAY)
-           NOTE: This file is an "add-on" over gemini_v3:
-           - All old functionality preserved (ids, functions, UI blocks)
-           - Lots of new cards, softer shapes, more glass, more dynamics
-           ========================================================== */
-
-        /* --- 1. CORE VARIABLES & THEME (preserved + extended) --- */
         :root{
             --primary: #00f2ff;
             --secondary: #bc13fe;
@@ -39,8 +31,6 @@
             --anim-speed: 0.4s;
             --card-radius: 38px;
             --btn-radius: 999px;
-
-            /* v5 additions */
             --soft-shadow: 0 22px 60px rgba(0,0,0,0.32);
             --inner-glow: 0 0 0 1px rgba(255,255,255,0.06) inset;
 
@@ -272,11 +262,21 @@
             user-select:none;
         }
 
+        @media (hover:hover) and (pointer:fine){
         .icon-btn:hover{
             transform: translateY(-2px) scale(1.02);
             color:#000;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             box-shadow: 0 10px 30px rgba(0,242,255,0.22);
+        }
+        }
+
+        /* явное активное состояние (для поиска) */
+        .icon-btn.is-active{
+        transform: translateY(-2px) scale(1.02);
+        color:#000;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        box-shadow: 0 10px 30px rgba(0,242,255,0.22);
         }
 
         /* Search container (preserved + improved) */
@@ -955,6 +955,18 @@
                 width: 100%;
                 padding: 10px 14px;
             }
+
+            #hudSearch{ display:none !important; }
+
+
+            body.search-open #hudSearch{
+                display:block !important;
+                position:fixed;
+                left:12px;
+                right:12px;
+                top: calc(env(safe-area-inset-top) + 18px + 72px + 10px);
+                z-index:9999;
+            }
         }
 
         @media (prefers-reduced-motion: reduce){
@@ -1105,6 +1117,82 @@
             }
             }
 
+            /* По умолчанию кнопку мобильного поиска не показываем */
+            .search-toggle { display: none; }
+
+            /* Backdrop для закрытия по тапу вне */
+            .search-backdrop{
+                position: fixed;
+                inset: 0;
+                opacity: 0;
+                pointer-events: none;
+                background: rgba(0,0,0,0.28);
+                backdrop-filter: blur(12px) saturate(120%);
+                -webkit-backdrop-filter: blur(12px) saturate(120%);
+                transition: opacity .22s ease;
+                z-index: 9998;
+            }
+            /* Мобильный режим */
+            @media (max-width: 640px){
+                /* поиск скрыт, кнопка видна */
+                #hudSearch{ display:none; }
+                .search-toggle{ display:inline-flex; }
+
+                body.search-open .search-backdrop{
+                    opacity: 1;
+                    pointer-events: auto;
+                }
+
+                body.search-open #hudSearch{
+                    display:block;
+                    position:fixed;
+                    left:12px;
+                    right:12px;
+
+                    /* ВАЖНО: вместо "72px" используем переменную, которую выставит JS */
+                    top: calc(var(--hud-bottom, 90px) + 10px);
+
+                    z-index:9999;
+                    background: transparent;
+                    padding:0;
+                }
+
+                /* стекло только в границах строки поиска */
+                body.search-open #hudSearch .search-bar{
+                    width:100%;
+                    max-width:none;
+
+                    position:relative;
+                    overflow:hidden;
+                    isolation:isolate;
+                    transform: translateZ(0);
+
+                    background: rgba(12,12,20,0.35);
+                    border: 1px solid rgba(255,255,255,0.14);
+                    border-radius: 999px;
+                    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+
+                    backdrop-filter: blur(18px) saturate(150%);
+                    -webkit-backdrop-filter: blur(18px) saturate(150%);
+                }
+
+                body.search-open #hudSearch .search-bar::after{
+                    content:"";
+                    position:absolute;
+                    inset:1px;
+                    border-radius: inherit;
+                    pointer-events:none;
+                    background:
+                    radial-gradient(120% 120% at 10% 0%, rgba(255,255,255,0.14), transparent 55%),
+                    radial-gradient(120% 120% at 90% 100%, rgba(0,242,255,0.10), transparent 50%);
+                    mix-blend-mode: screen;
+                    opacity: 0.9;
+                }
+            }
+
+
+
+
 
 
 
@@ -1244,20 +1332,27 @@
             </div>
         </div>
 
-        <div class="search-container">
+        <div class="search-container" id="hudSearch">
             <div class="search-bar">
                 <span class="material-symbols-outlined" style="opacity:0.55;">search</span>
                 <input type="text" id="cardSearch" placeholder="Поиск модулей..." />
                 <span class="material-symbols-outlined" id="micBtn" onclick="toggleVoice()" style="cursor:pointer; opacity:0.75; font-size:20px;" title="Голосовое управление">mic</span>
-                <span class="material-symbols-outlined" class="icon-btn" onclick="openCmdPalette()" style="cursor:pointer; opacity:0.75; font-size:20px;" title="Командная палитра (Ctrl+K)">keyboard_command_key</span>
+                <span class="material-symbols-outlined icon-btn" onclick="openCmdPalette()" style="cursor:pointer; opacity:0.75; font-size:20px;" title="Командная палитра (Ctrl+K)">keyboard_command_key</span>
             </div>
         </div>
 
         <div class="hud-right">
+            <span class="material-symbols-outlined icon-btn search-toggle"
+                onclick="toggleMobileSearch()"
+                title="Поиск">search</span>
+
             <span class="material-symbols-outlined icon-btn" onclick="openHistory()" title="История">history</span>
             <span class="material-symbols-outlined icon-btn" onclick="openSettings()" title="Настройки">settings</span>
         </div>
     </nav>
+    
+    <div id="searchBackdrop" class="search-backdrop" onclick="toggleMobileSearch(false)"></div>
+
 
     <!-- Side nav preserved + extended anchors -->
     <div class="side-nav">
@@ -2024,6 +2119,52 @@ console.log('hello');
         }
         initParticles();
         animateParticles();
+
+
+        let _searchHome = null;
+
+        function toggleMobileSearch(force){
+        const isMobile = window.matchMedia("(max-width: 640px)").matches;
+        if(!isMobile) return;
+
+        const open = (typeof force === "boolean")
+            ? force
+            : !document.body.classList.contains("search-open");
+
+        const el = document.getElementById("hudSearch");
+        if(!el) return;
+
+        if(!_searchHome){
+            _searchHome = { parent: el.parentNode, next: el.nextSibling };
+        }
+
+        document.body.classList.toggle("search-open", open);
+
+        const btn = document.querySelector(".search-toggle");
+        if(btn){
+        btn.classList.toggle("is-active", open);
+        btn.textContent = open ? "close" : "search"; // по желанию
+        if(!open) btn.blur(); // важно: снимает "залипший" фокус/active
+        }
+
+        if(open){
+            document.body.appendChild(el);
+            el.classList.add("search-float");
+
+            const inp = document.getElementById("cardSearch");
+            if(inp) setTimeout(()=>inp.focus(), 0);
+        } else {
+            el.classList.remove("search-float");
+            if(_searchHome.parent){
+            _searchHome.parent.insertBefore(el, _searchHome.next);
+            }
+        }
+        }
+
+        document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape") toggleMobileSearch(false);
+        });
+
 
         /* ---------------------------------------------------------
            3) AUDIO SYSTEM & VISUALIZER (preserved)
