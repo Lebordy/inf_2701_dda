@@ -1237,6 +1237,23 @@
             }
 
 
+            
+            /* =========================
+            Mobile / Low power mode
+            ========================= */
+            html.low-power #bgCanvas,
+            html.low-power #particleCanvas{
+            display:none !important;
+            }
+
+            /* На мобилках и reduce-motion: проще фон, меньше дорогих эффектов */
+            @media (prefers-reduced-motion: reduce), (max-width: 768px){
+            #bgCanvas, #particleCanvas{ display:none !important; }
+            /* если есть блоки с большим blur/filters — лучше выключить */
+            *{ scroll-behavior: auto !important; }
+            }
+
+
 
 
 
@@ -2004,6 +2021,22 @@ console.log('hello');
             spot: 0.22,
         };
 
+        /* =========================
+        Runtime flags (mobile-first)
+        ========================= */
+        const mqMobile = window.matchMedia("(max-width: 768px)");
+        const mqReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const lowPowerMode = mqMobile.matches || mqReduce.matches;
+
+        if (lowPowerMode) document.documentElement.classList.add("low-power");
+
+        // пауза “тяжёлых” апдейтов, когда вкладка не видима
+        let pageActive = document.visibilityState === "visible";
+        document.addEventListener("visibilitychange", () => {
+        pageActive = document.visibilityState === "visible";
+        });
+
+
         /* ---------------------------------------------------------
            CURSOR SPOTLIGHT (soft dynamic background)
            --------------------------------------------------------- */
@@ -2084,13 +2117,18 @@ console.log('hello');
         window.addEventListener('pointermove', (e)=>{ pointer.x = e.clientX; pointer.y = e.clientY; });
 
         function animateBlobs(t=0) {
+            if (!pageActive) return requestAnimationFrame(animateBlobs);
             ctx.clearRect(0,0,canvas.width, canvas.height);
             ctx.globalCompositeOperation = 'screen';
             blobs.forEach(b => { b.update(t, pointer); b.draw(); });
             requestAnimationFrame(animateBlobs);
         }
+        if (!lowPowerMode) {
         initBlobs();
         animateBlobs();
+        } else {
+        // экономим: фон берём из CSS, canvas не используем
+        }
 
         /* ---------------------------------------------------------
            2) PARTICLE LAYER (new)
@@ -2135,11 +2173,15 @@ console.log('hello');
 
         function initParticles(){
             particles = [];
-            const count = Math.min(140, Math.floor((window.innerWidth * window.innerHeight) / 18000));
+            const area = window.innerWidth * window.innerHeight;
+            const maxCount = lowPowerMode ? 60 : 140;
+            const divisor = lowPowerMode ? 32000 : 18000;
+            const count = Math.min(maxCount, Math.floor(area / divisor));
             for(let i=0;i<count;i++) particles.push(new Particle());
         }
 
         function animateParticles(){
+            if (!pageActive) return requestAnimationFrame(animateParticles);
             pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
             pCtx.globalCompositeOperation = 'lighter';
             particles.forEach(p => { p.step(); p.draw(); });
@@ -2163,8 +2205,10 @@ console.log('hello');
 
             requestAnimationFrame(animateParticles);
         }
+        if (!lowPowerMode) {
         initParticles();
         animateParticles();
+        }
 
 
         let _searchHome = null;
@@ -4077,5 +4121,4 @@ console.log('hello');
 
     </script>
 </body>
-
 </html>
